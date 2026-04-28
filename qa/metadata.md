@@ -3,13 +3,13 @@
 ## Environment
 
 - Date: 2026-04-28
-- OpenCode binary: `/mnt/c/Users/victo/documents/code/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode`
+- OpenCode binary: `<opencode>/packages/opencode/dist/opencode-linux-x64/bin/opencode`
 - OpenCode version shown in both captures: `1.14.28`
-- Working directory: `/mnt/c/Users/victo/documents/code/opencode-usage-quota`
+- Working directory: `~/projects/opencode-usage-quota`
 - tmux geometry: `160x42`
-- Baseline config: `/mnt/c/Users/victo/documents/code/opencode-usage-quota/qa/tui.before.json`
-- Plugin config: `/mnt/c/Users/victo/documents/code/opencode-usage-quota/qa/tui.after.json`
-- Plugin path loaded by after config: `/mnt/c/Users/victo/documents/code/opencode-usage-quota/src/tui.tsx`
+- Baseline config: `<repo>/qa/tui.before.json`
+- Plugin config: `<repo>/qa/tui.after.json`
+- Plugin path loaded by after config: `<repo>/src/tui.tsx`
 
 ## Isolation knobs
 
@@ -52,7 +52,7 @@ Baseline relevant lines:
 ```text
 ┃  Build  Big Pickle OpenCode Zen
 tab agents  ctrl+p commands
-/mnt/c/Users/victo/documents/code/opencode-usage-quota:main                                                                                          1.14.28
+~/projects/opencode-usage-quota:main                                                                                                                 1.14.28
 ```
 
 Plugin relevant lines:
@@ -60,7 +60,7 @@ Plugin relevant lines:
 ```text
 ┃  Build  Big Pickle OpenCode Zen                       quota unavailable
 tab agents  ctrl+p commands
-/mnt/c/Users/victo/documents/code/opencode-usage-quota:main                                                                                          1.14.28
+~/projects/opencode-usage-quota:main                                                                                                                 1.14.28
 ```
 
 The after-only `quota unavailable` text is expected in this isolated run because the disposable XDG/OpenCode state does not include OpenAI/Codex OAuth credentials or assistant-token history. It proves the plugin loaded and rendered its safe fallback state.
@@ -70,8 +70,8 @@ The after-only `quota unavailable` text is expected in this isolated run because
 After log proof:
 
 ```text
-INFO service=tui.plugin path=file:///mnt/c/Users/victo/documents/code/opencode-usage-quota/src/tui.tsx retry=false loading tui plugin
-INFO service=tui.plugin path=file:///mnt/c/Users/victo/documents/code/opencode-usage-quota/src/tui.tsx retry=false state=first source=file ... tui plugin metadata updated
+INFO service=tui.plugin path=file://<repo>/src/tui.tsx retry=false loading tui plugin
+INFO service=tui.plugin path=file://<repo>/src/tui.tsx retry=false state=first source=file ... tui plugin metadata updated
 INFO service=server method=GET path=/experimental/console/codex-quota request
 INFO service=server status=completed ... path=/experimental/console/codex-quota request
 ```

@@ -12,8 +12,8 @@
   ┃                                                                                                                                                                  LSPs will activate as files are read
   ┃  0e2e5f4 fix(customers): exclude future bookings from active metric
   ┃  3b435e2 fix(conversations): preserve unread state on failed operator send                                                                                       ▼ Modified Files
-  ┃  0e2e5f4 50sotero <victor.sotero@ic.ufal.br> | 50sotero <victor.sotero@ic.ufal.br> | fix(customers): exclude future bo...                                        apps/api/app/modules/conversati +3 -2
-  ┃  3b435e2 50sotero <victor.sotero@ic.ufal.br> | 50sotero <victor.sotero@ic.ufal.br> | fix(conversations): preserve unre...                                        apps/api/tests/test_outbound_deli +62
+  ┃  0e2e5f4 50sotero <redacted@example.com> | 50sotero <redacted@example.com> | fix(customers): exclude future bo...                                          apps/api/app/modules/conversati +3 -2
+  ┃  3b435e2 50sotero <redacted@example.com> | 50sotero <redacted@example.com> | fix(conversations): preserve unre...                                          apps/api/tests/test_outbound_deli +62
   ┃                                                                                                                                                                  apps/web/src/routes/__tests__/live +5
                                                                                                                                                                      apps/web/src/routes/app.custome +1 -1
   ┃  Thinking: Considering cleanup needs
@@ -48,8 +48,7 @@
 
   ┃
   ┃
-  ┃                                                                                                                                                                  /mnt/c/Users/victo/documents/code/
+  ┃                                                                                                                                                                  ~/projects/
   ┃  Hephaestus (Deep Agent)  GPT 5.5 (OAuth) OpenAI · xhigh                                                                                                         vemmarcado:ops/cheap-vps-deploy-plan
   ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
                                                                    98.5K (38%) · codex 5h ██████████ 96% · wk █████████░ 94% · ⟳ today@19h20m21s  ctrl+p commands    • OpenCode 1.14.28
-

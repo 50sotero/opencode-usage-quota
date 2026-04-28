@@ -38,5 +38,4 @@
 
 
 
-  /mnt/c/Users/victo/documents/code/opencode-usage-quota:main                                                                                          1.14.28
-
+  ~/projects/opencode-usage-quota:main                                                                                                                 1.14.28
