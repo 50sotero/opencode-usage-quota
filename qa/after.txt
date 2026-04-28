@@ -21,7 +21,7 @@
                                            ┃
                                            ┃  Ask anything... "What is the tech stack of this project?"
                                            ┃
-                                           ┃  Build  Big Pickle OpenCode Zen                       quota unavailable
+                                           ┃  Build  Big Pickle OpenCode Zen
                                            ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
                                                                                            tab agents  ctrl+p commands
 

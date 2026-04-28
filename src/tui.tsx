@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
-import { createMemo, createSignal } from "solid-js"
+import { Show, createMemo, createSignal } from "solid-js"
 import {
   formatUsageQuotaPrompt,
   formatUsageQuotaReport,
@@ -82,7 +82,7 @@ function View(props: {
     formatUsageQuotaPrompt(props.snapshot, props.showLocalUsageFallback ? summarizeUsage(props.records) : []),
   )
 
-  return <text fg={props.api.theme.current.textMuted}>{label()}</text>
+  return <Show when={label()}>{(value) => <text fg={props.api.theme.current.textMuted}>{value()}</text>}</Show>
 }
 
 export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {

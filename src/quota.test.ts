@@ -14,6 +14,10 @@ import {
 const now = new Date("2026-04-28T18:00:00Z").getTime()
 
 describe("usage quota formatting", () => {
+  test("hides the prompt status when no quota or local usage is available", () => {
+    expect(formatUsageQuotaPrompt(undefined, [])).toBeUndefined()
+  })
+
   test("normalizes and formats codex five-hour and weekly quota", () => {
     const snapshot = normalizeCodexQuota({
       fiveHour: { remainingPercent: 88.4, resetSeconds: 600 },

@@ -43,7 +43,7 @@ This prevents global/user/project OpenCode config from being the reason the afte
 - Baseline ANSI capture: `qa/before.ansi`
 - Plugin ANSI capture: `qa/after.ansi`
 
-SVG screenshots were generated from the tmux pane text because no local image conversion utility (`magick`, `convert`, `ansilove`, etc.) or Python PIL installation was available.
+PNG screenshots are generated from sanitized tmux pane text using Pillow.
 
 ## Observations
 
@@ -55,15 +55,15 @@ tab agents  ctrl+p commands
 ~/projects/opencode-usage-quota:main                                                                                                                 1.14.28
 ```
 
-Plugin relevant lines:
+Plugin relevant lines when no quota or local usage is available:
 
 ```text
-┃  Build  Big Pickle OpenCode Zen                       quota unavailable
+┃  Build  Big Pickle OpenCode Zen
 tab agents  ctrl+p commands
 ~/projects/opencode-usage-quota:main                                                                                                                 1.14.28
 ```
 
-The after-only `quota unavailable` text is expected in this isolated run because the disposable XDG/OpenCode state does not include OpenAI/Codex OAuth credentials or assistant-token history. It proves the plugin loaded and rendered its safe fallback state.
+The plugin intentionally renders nothing in the prompt row when the disposable QA state has no OpenAI/Codex OAuth credentials and no assistant-token history.
 
 ## Load/error evidence
 
@@ -85,6 +85,6 @@ PASS for isolated TUI load and visual before/after proof:
 - Same working directory and terminal size.
 - Same baseline UI state.
 - Plugin run differs only by explicit `OPENCODE_TUI_CONFIG` and disposable state dirs.
-- Plugin visibly renders in the prompt-right area.
+- Plugin loads without rendering placeholder text when quota is unavailable.
 - Footer/version remains separate and unchanged.
 - Plugin load is confirmed by logs.

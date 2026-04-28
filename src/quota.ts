@@ -199,7 +199,7 @@ export function formatLocalUsagePrompt(summary: readonly ProviderUsageSummary[])
 }
 
 export function formatUsageQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {
-  return formatCodexQuotaPrompt(snapshot) ?? formatLocalUsagePrompt(summary) ?? "quota unavailable"
+  return formatCodexQuotaPrompt(snapshot) ?? formatLocalUsagePrompt(summary)
 }
 
 export function formatUsageQuotaReport(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {
