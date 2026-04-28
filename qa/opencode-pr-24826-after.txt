@@ -1,0 +1,42 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                              ▄
+                                                             █▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█
+                                                             █  █ █  █ █▀▀▀ █  █ █    █  █ █  █ █▀▀▀
+                                                             ▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀
+
+
+                                           ┃
+                                           ┃  Ask anything... "Fix a TODO in the codebase"
+                                           ┃
+                                           ┃  Sisyphus (Ultraworker)  GPT 5.5 (OAuth) OpenAI · xhigh
+                                           ╹▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+                                                codex 5h █████ 97% · wk █████ 94% · ⟳ today@19h12m13s  ctrl+p commands
+
+
+
+                                               ● Tip Add .md files to .opencode/agent/ for specialized AI personas
+
+
+
+
+
+
+
+
+
+
+  /mnt/c/Users/victo/documents/code/vemmarcado:ops/cheap-vps-deploy-plan  ⊙ 4 MCP /status                                                              1.14.28
+
