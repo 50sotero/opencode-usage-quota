@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-usage-quota",
+  "version": "0.1.0",
+  "description": "OpenCode TUI plugin for Codex quota and provider usage visibility.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/50sotero/opencode-usage-quota.git"
+  },
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./tui": {
+      "types": "./dist/tui.d.ts",
+      "default": "./src/tui.tsx"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "!src/**/*.test.ts",
+    "!dist/**/*.test.js",
+    "!dist/**/*.test.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.4.3",
+    "solid-js": "^1.9.10"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.1.97",
+    "@opentui/solid": ">=0.1.97"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@opentui/core": "^0.1.97",
+    "@opentui/solid": "^0.1.97",
+    "@types/bun": "latest",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "quota",
+    "usage",
+    "codex"
+  ]
+}

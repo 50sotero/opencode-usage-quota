@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tgz
+
+# Disposable OpenCode/tmux QA runtime state. Keep the captures and metadata.
+qa/*-home/
+qa/*-config/
+qa/*-data/
+qa/*-cache/
+qa/*-state/
+qa/*-opencode-config-dir/
