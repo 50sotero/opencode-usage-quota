@@ -9,19 +9,11 @@ import {
   readNativeProviderQuota,
   type ProviderQuotaSnapshot,
 } from "./provider-quota.js"
-import {
-  isUsageRecord,
-  upsertUsageRecord,
-  usageRecordFromEvent,
-  type UsageRecord,
-} from "./quota.js"
-import { readProviderQuotas } from "./providers/index.js"
-import { codexQuotaAdapter } from "./providers/codex.js"
-import { localUsageAdapter } from "./providers/local-usage.js"
+import { isUsageRecord, upsertUsageRecord, usageRecordFromEvent, type UsageRecord } from "./quota.js"
+import { defaultProviderQuotaAdapters, readProviderQuotas } from "./providers/index.js"
 
 const id = "opencode-usage-quota"
 const storageKey = "opencode-usage-quota.records"
-const adapters = [codexQuotaAdapter, localUsageAdapter]
 
 type Options = {
   refreshMs?: number
@@ -46,7 +38,7 @@ function loadRecords(api: TuiPluginApi) {
   return value.filter(isUsageRecord)
 }
 
-export function hasNativeProviderQuota(client: unknown) {
+function hasNativeProviderQuota(client: unknown) {
   return hasNativeProviderQuotaClient(client)
 }
 
@@ -62,20 +54,12 @@ function BelowPromptStatus(props: { api: TuiPluginApi; snapshots: readonly Provi
   if (props.block) {
     return (
       <box width="100%" height={1} alignItems="center" justifyContent="center">
-        <QuotaStatusText
-          api={props.api}
-          snapshots={props.snapshots}
-        />
+        <QuotaStatusText api={props.api} snapshots={props.snapshots} />
       </box>
     )
   }
 
-  return (
-    <QuotaStatusText
-      api={props.api}
-      snapshots={props.snapshots}
-    />
-  )
+  return <QuotaStatusText api={props.api} snapshots={props.snapshots} />
 }
 
 function SessionPromptWithStatus(props: {
@@ -97,10 +81,7 @@ function SessionPromptWithStatus(props: {
         ref={props.promptRef}
       />
       <box width="100%" height={1} flexDirection="row" justifyContent="flex-end" paddingRight={2}>
-        <QuotaStatusText
-          api={props.api}
-          snapshots={props.snapshots}
-        />
+        <QuotaStatusText api={props.api} snapshots={props.snapshots} />
       </box>
     </box>
   )
@@ -119,7 +100,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
         return
       }
 
-      const result = await readProviderQuotas(adapters, { client: api.client, records: records() })
+      const result = await readProviderQuotas(defaultProviderQuotaAdapters, { client: api.client, records: records() })
       setSnapshots(normalizeProviderQuotaSnapshots(result))
     } catch {
       setSnapshots([])
@@ -161,13 +142,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
           )
         },
         home_bottom() {
-          return (
-            <BelowPromptStatus
-              api={api}
-              snapshots={snapshots()}
-              block
-            />
-          )
+          return <BelowPromptStatus api={api} snapshots={snapshots()} block />
         },
       },
     })

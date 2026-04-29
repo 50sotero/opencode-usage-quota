@@ -134,13 +134,16 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
   return `${snapshot.provider} ${parts.join(" · ")}`
 }
 
+
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
-  const values = []
-  if (window.remainingPercent !== undefined) values.push(`${Math.round(clampProviderQuotaPercent(window.remainingPercent))}%`)
-  if (window.remaining !== undefined && window.limit !== undefined) values.push(`${Math.round(window.remaining)}/${Math.round(window.limit)}`)
-  else if (window.remaining !== undefined) values.push(Math.round(window.remaining).toLocaleString("en-US"))
-  if (window.resetAt !== undefined) values.push(`resets ${new Date(window.resetAt).toISOString()}`)
-  return values.length > 0 ? values.join(" ") : "status only"
+  const parts: string[] = []
+  if (window.remainingPercent !== undefined) parts.push(`${Math.round(clampPercent(window.remainingPercent))}%`)
+  if (window.remaining !== undefined && window.limit !== undefined) {
+    parts.push(`${Math.round(window.remaining).toLocaleString("en-US")}/${Math.round(window.limit).toLocaleString("en-US")}`)
+  } else if (window.remaining !== undefined) {
+    parts.push(Math.round(window.remaining).toLocaleString("en-US"))
+  }
+  return parts.length > 0 ? parts.join(" ") : "status only"
 }
 
 export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnapshot[]) {
@@ -154,12 +157,8 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   for (const snapshot of snapshots) {
     const suffix = snapshot.detail ? ` — ${snapshot.detail}` : ""
     lines.push(`${snapshot.label} (${snapshot.provider}): ${snapshot.status}${suffix}`)
-    if (snapshot.windows.length === 0) {
-      lines.push("- no quota windows available")
-    } else {
-      for (const window of snapshot.windows) {
-        lines.push(`- ${window.label}: ${formatProviderQuotaValue(window)} ${window.confidence} from ${window.source}`)
-      }
+    for (const window of snapshot.windows) {
+      lines.push(`- ${window.label}: ${formatProviderQuotaValue(window)} ${window.confidence} from ${window.source}`)
     }
     lines.push("")
   }
@@ -170,39 +169,26 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   return lines.join("\n").trimEnd()
 }
 
-function generatedProviderQuotaReader(client: unknown): NativeQuotaReader | undefined {
+type ProviderQuotaClientMethod = (input?: unknown) => Promise<{ data?: unknown }>
+type RawClientGetMethod = (input: { url: string }) => Promise<{ data?: unknown }>
+
+function generatedProviderQuotaReader(client: unknown) {
   if (!isRecord(client)) return
   const experimental = isRecord(client.experimental) ? client.experimental : undefined
   if (!experimental) return
 
-  const providerQuota = experimental.providerQuota
-  if (typeof providerQuota === "function") {
-    const method = providerQuota as ProviderQuotaClientMethod
+  const direct = experimental.providerQuota ?? experimental.provider_quota
+  if (typeof direct === "function") {
+    const method = direct as ProviderQuotaClientMethod
     return async () => (await method({})).data
   }
-  if (isRecord(providerQuota)) {
-    const get = providerQuota.get
-    if (typeof get === "function") {
-      const method = get as ProviderQuotaClientMethod
+  if (isRecord(direct)) {
+    if (typeof direct.get === "function") {
+      const method = direct.get as ProviderQuotaClientMethod
       return async () => (await method({})).data
     }
-
-    const list = providerQuota.list
-    if (typeof list === "function") {
-      const method = list as ProviderQuotaClientMethod
-      return async () => (await method({})).data
-    }
-  }
-
-  const snakeProviderQuota = experimental.provider_quota
-  if (typeof snakeProviderQuota === "function") {
-    const method = snakeProviderQuota as ProviderQuotaClientMethod
-    return async () => (await method({})).data
-  }
-  if (isRecord(snakeProviderQuota)) {
-    const get = snakeProviderQuota.get
-    if (typeof get === "function") {
-      const method = get as ProviderQuotaClientMethod
+    if (typeof direct.list === "function") {
+      const method = direct.list as ProviderQuotaClientMethod
       return async () => (await method({})).data
     }
   }
@@ -213,32 +199,27 @@ function generatedProviderQuotaReader(client: unknown): NativeQuotaReader | unde
     const method = quota as ProviderQuotaClientMethod
     return async () => (await method({})).data
   }
-  if (isRecord(quota)) {
-    const get = quota.get
-    if (typeof get === "function") {
-      const method = get as ProviderQuotaClientMethod
-      return async () => (await method({})).data
-    }
+  if (isRecord(quota) && typeof quota.get === "function") {
+    const method = quota.get as ProviderQuotaClientMethod
+    return async () => (await method({})).data
   }
 }
 
-function rawProviderQuotaReader(client: unknown): NativeQuotaReader | undefined {
+function rawProviderQuotaReader(client: unknown) {
   if (!isRecord(client)) return
   const rawClient = isRecord(client.client) ? client.client : undefined
-  const get = rawClient?.get
-  if (typeof get !== "function") return
-  const method = get as RawClientGetMethod
-  return async () => (await method({ url: "/experimental/provider-quota" })).data
+  if (typeof rawClient?.get !== "function") return
+  const get = rawClient.get as RawClientGetMethod
+  return async () => (await get({ url: "/experimental/provider-quota" })).data
 }
 
 export function hasNativeProviderQuotaClient(client: unknown) {
-  // A generic raw HTTP client is available in stock OpenCode too; only generated provider-quota helpers prove native compact UI exists.
   return Boolean(generatedProviderQuotaReader(client))
 }
 
 export async function readNativeProviderQuota(client: unknown) {
   const readers = [generatedProviderQuotaReader(client), rawProviderQuotaReader(client)].filter(
-    (reader): reader is NativeQuotaReader => reader !== undefined,
+    (reader): reader is () => Promise<unknown> => Boolean(reader),
   )
 
   for (const reader of readers) {
@@ -251,7 +232,7 @@ export async function readNativeProviderQuota(client: unknown) {
         if (Array.isArray(data.snapshots)) return normalizeProviderQuotaSnapshots(data.snapshots)
       }
     } catch {
-      // Try the next available client surface. Stock OpenCode may not have this endpoint.
+      // Try the next OpenCode client surface; stock builds may not expose native provider quota.
     }
   }
 

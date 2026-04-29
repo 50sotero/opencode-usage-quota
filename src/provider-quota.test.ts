@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import {
-  formatProviderQuotaPrompt,
-  hasNativeProviderQuotaClient,
-  normalizeProviderQuotaSnapshots,
-  readNativeProviderQuota,
-} from "./provider-quota.js"
+import { formatProviderQuotaPrompt, formatProviderQuotaReport, hasNativeProviderQuotaClient, normalizeProviderQuotaSnapshots, readNativeProviderQuota } from "./provider-quota.js"
 
 describe("provider quota model", () => {
   test("keeps exact and reported windows visible in compact prompt output", () => {
@@ -91,29 +86,52 @@ describe("provider quota model", () => {
     expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe("gemini rpm 71%")
   })
 
-
-  test("detects explicit native provider quota helpers without hiding stock raw clients", async () => {
-    expect(hasNativeProviderQuotaClient({ client: { get: async () => ({ data: { providerQuota: [] } }) } })).toBe(false)
-    expect(hasNativeProviderQuotaClient({ experimental: { providerQuota: { get: async () => ({ data: { providerQuota: [] } }) } } })).toBe(true)
-
-    const snapshots = await readNativeProviderQuota({
-      client: {
-        get: async () => ({
+  test("reads native OpenCode provider quota snapshots from generated clients", async () => {
+    const client = {
+      experimental: {
+        providerQuota: async () => ({
           data: {
             providerQuota: [
               {
-                provider: "codex",
-                label: "Codex",
-                fetchedAt: 1,
+                provider: "anthropic",
+                label: "Anthropic",
+                fetchedAt: 3,
                 status: "available",
-                windows: [{ label: "5h", remainingPercent: 91, confidence: "exact", source: "official_api" }],
+                windows: [{ label: "req", remainingPercent: 82, confidence: "reported", source: "response_headers" }],
               },
             ],
           },
         }),
       },
-    })
+    }
 
-    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 91%")
+    expect(hasNativeProviderQuotaClient(client)).toBe(true)
+    await expect(readNativeProviderQuota(client)).resolves.toEqual([
+      {
+        provider: "anthropic",
+        label: "Anthropic",
+        fetchedAt: 3,
+        status: "available",
+        windows: [{ label: "req", remainingPercent: 82, confidence: "reported", source: "response_headers" }],
+      },
+    ])
   })
+
+  test("formats detail reports with confidence labels", () => {
+    const snapshots = normalizeProviderQuotaSnapshots([
+      {
+        provider: "openrouter",
+        label: "OpenRouter",
+        fetchedAt: 4,
+        status: "degraded",
+        windows: [{ label: "credits", remaining: 12, limit: 20, confidence: "reported", source: "official_api" }],
+        detail: "key-level credits",
+      },
+    ])
+
+    expect(formatProviderQuotaReport(snapshots)).toContain("OpenRouter (openrouter): degraded — key-level credits")
+    expect(formatProviderQuotaReport(snapshots)).toContain("credits: 12/20 reported from official_api")
+    expect(formatProviderQuotaReport([])).toContain("No provider quota snapshots")
+  })
+
 })
