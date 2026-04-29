@@ -123,3 +123,80 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
   if (parts.length === 0) return
   return `${snapshot.provider} ${parts.join(" · ")}`
 }
+
+
+function formatProviderQuotaValue(window: ProviderQuotaWindow) {
+  const values = []
+  if (window.remainingPercent !== undefined) values.push(`${clampProviderQuotaPercent(window.remainingPercent)}%`)
+  if (window.remaining !== undefined && window.limit !== undefined) values.push(`${Math.round(window.remaining)}/${Math.round(window.limit)}`)
+  else if (window.remaining !== undefined) values.push(`${Math.round(window.remaining).toLocaleString("en-US")}`)
+  return values.length > 0 ? values.join(" ") : "status only"
+}
+
+export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnapshot[]) {
+  const lines = ["Provider quota status", ""]
+
+  if (snapshots.length === 0) {
+    lines.push("No provider quota snapshots are available yet.")
+    return lines.join("\n")
+  }
+
+  for (const snapshot of snapshots) {
+    const suffix = snapshot.detail ? ` — ${snapshot.detail}` : ""
+    lines.push(`${snapshot.label} (${snapshot.provider}): ${snapshot.status}${suffix}`)
+    for (const window of snapshot.windows) {
+      lines.push(`- ${window.label}: ${formatProviderQuotaValue(window)} ${window.confidence} from ${window.source}`)
+    }
+    lines.push("")
+  }
+
+  lines.push("Confidence labels: exact = current provider-reported remaining quota; reported = official limits/headers; estimated = local usage or heuristic, not provider-enforced remaining quota.")
+  return lines.join("\n").trimEnd()
+}
+
+function generatedProviderQuotaReader(client: unknown) {
+  if (!isRecord(client)) return
+  const experimental = isRecord(client.experimental) ? client.experimental : undefined
+  const providerQuota = experimental?.providerQuota
+  if (typeof providerQuota === "function") return async () => (await providerQuota({})).data
+  if (isRecord(providerQuota)) {
+    if (typeof providerQuota.get === "function") return async () => (await providerQuota.get({})).data
+    if (typeof providerQuota.list === "function") return async () => (await providerQuota.list({})).data
+  }
+  if (isRecord(experimental) && typeof experimental.providerQuota === "function") {
+    return async () => (await experimental.providerQuota({})).data
+  }
+}
+
+function rawProviderQuotaReader(client: unknown) {
+  if (!isRecord(client)) return
+  const rawClient = isRecord(client.client) ? client.client : undefined
+  if (typeof rawClient?.get !== "function") return
+  return async () => (await rawClient.get({ url: "/experimental/provider-quota" })).data
+}
+
+export function hasNativeProviderQuotaClient(client: unknown) {
+  return Boolean(generatedProviderQuotaReader(client))
+}
+
+export async function readNativeProviderQuota(client: unknown) {
+  const readers = [generatedProviderQuotaReader(client), rawProviderQuotaReader(client)].filter(
+    (reader): reader is () => Promise<unknown> => Boolean(reader),
+  )
+
+  for (const reader of readers) {
+    try {
+      const data = await reader()
+      if (Array.isArray(data)) return normalizeProviderQuotaSnapshots(data)
+      if (isRecord(data)) {
+        if (Array.isArray(data.providerQuota)) return normalizeProviderQuotaSnapshots(data.providerQuota)
+        if (Array.isArray(data.provider_quota)) return normalizeProviderQuotaSnapshots(data.provider_quota)
+        if (Array.isArray(data.snapshots)) return normalizeProviderQuotaSnapshots(data.snapshots)
+      }
+    } catch {
+      // Try the next available client surface. Stock OpenCode may not have this endpoint.
+    }
+  }
+
+  return []
+}
