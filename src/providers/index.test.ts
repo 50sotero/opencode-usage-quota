@@ -1,90 +1,93 @@
 import { describe, expect, test } from "bun:test"
-import { codexQuotaAdapter } from "./codex.js"
-import { localUsageAdapter } from "./local-usage.js"
-import { readProviderQuotas, type ProviderQuotaAdapter } from "./index.js"
-import type { UsageRecord } from "../quota.js"
+import { formatProviderQuotaPrompt } from "../provider-quota.js"
+import { createCodexQuotaAdapter, createLocalUsageQuotaAdapter, readProviderQuotas, type ProviderQuotaAdapter } from "./index.js"
 
-const now = new Date("2026-04-29T09:00:00Z").getTime()
-
-describe("provider quota adapters", () => {
+describe("provider quota adapter registry", () => {
   test("isolates adapter failures as unavailable snapshots", async () => {
     const adapters: ProviderQuotaAdapter[] = [
       {
-        provider: "ok",
-        read: async () => ({
-          provider: "ok",
-          label: "OK",
-          fetchedAt: now,
-          status: "available",
-          windows: [{ label: "req", remainingPercent: 80, confidence: "reported", source: "response_headers" }],
-        }),
-      },
-      {
         provider: "broken",
         read: async () => {
-          throw new Error("boom")
+          throw new Error("provider timed out")
         },
+      },
+      {
+        provider: "codex",
+        read: async () => ({
+          provider: "codex",
+          label: "Codex",
+          fetchedAt: 42,
+          status: "available",
+          windows: [{ label: "5h", remainingPercent: 97, confidence: "exact", source: "official_api" }],
+        }),
       },
     ]
 
-    await expect(readProviderQuotas(adapters, { client: {}, records: [], now })).resolves.toEqual([
-      {
-        provider: "ok",
-        label: "OK",
-        fetchedAt: now,
-        status: "available",
-        windows: [{ label: "req", remainingPercent: 80, confidence: "reported", source: "response_headers" }],
-      },
+    const snapshots = await readProviderQuotas(adapters, { client: {}, records: [], now: 42 })
+
+    expect(snapshots).toEqual([
       {
         provider: "broken",
         label: "broken",
-        fetchedAt: now,
+        fetchedAt: 42,
         status: "unavailable",
-        windows: [{ label: "status", confidence: "reported", source: "client_state" }],
-        detail: "provider quota adapter failed",
+        windows: [],
+        detail: "provider timed out",
+      },
+      {
+        provider: "codex",
+        label: "Codex",
+        fetchedAt: 42,
+        status: "available",
+        windows: [{ label: "5h", remainingPercent: 97, confidence: "exact", source: "official_api" }],
       },
     ])
   })
 
   test("converts Codex quota into exact provider windows", async () => {
-    const client = {
-      experimental: {
-        console: {
-          codexQuota: async () => ({
-            data: {
-              fiveHour: { remainingPercent: 97.4, resetSeconds: 120 },
-              weekly: { remainingPercent: 90.2, resetAt: 1_765_000_000 },
-              fetchedAt: now,
-            },
-          }),
-        },
-      },
-    }
+    const adapter = createCodexQuotaAdapter(async () => ({
+      fiveHour: { remainingPercent: 97.2 },
+      weekly: { remainingPercent: 90.1 },
+      fetchedAt: 7,
+    }))
 
-    await expect(codexQuotaAdapter.read({ client, records: [], now })).resolves.toEqual({
-      provider: "codex",
-      label: "Codex",
-      fetchedAt: now,
-      status: "available",
-      windows: [
-        { label: "5h", remainingPercent: 97.4, resetAt: now + 120_000, confidence: "exact", source: "official_api" },
-        { label: "wk", remainingPercent: 90.2, resetAt: 1_765_000_000, confidence: "exact", source: "official_api" },
-      ],
-    })
+    const snapshots = await readProviderQuotas([adapter], { client: {}, records: [], now: 99 })
+
+    expect(snapshots).toEqual([
+      {
+        provider: "codex",
+        label: "Codex",
+        fetchedAt: 7,
+        status: "available",
+        windows: [
+          { label: "5h", remainingPercent: 97.2, confidence: "exact", source: "official_api" },
+          { label: "wk", remainingPercent: 90.1, confidence: "exact", source: "official_api" },
+        ],
+      },
+    ])
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 97% · wk 90%")
   })
 
-  test("reports local usage as estimated detail without compact remaining quota", async () => {
-    const records: UsageRecord[] = [
-      { id: "a", provider: "anthropic", model: "claude", tokens: 2500, cost: 0.02, timestamp: now - 1_000 },
-    ]
-
-    await expect(localUsageAdapter.read({ client: {}, records, now })).resolves.toEqual({
-      provider: "local-usage",
-      label: "Local usage",
-      fetchedAt: now,
-      status: "degraded",
-      windows: [{ label: "anthropic/claude", remaining: 2500, confidence: "estimated", source: "heuristic" }],
-      detail: "Observed OpenCode token usage only; not provider-enforced remaining quota.",
+  test("labels local usage as estimated detail data and keeps it out of compact prompt", async () => {
+    const now = new Date("2026-04-29T09:00:00Z").getTime()
+    const snapshots = await readProviderQuotas([createLocalUsageQuotaAdapter()], {
+      client: {},
+      now,
+      records: [
+        { id: "1", provider: "anthropic", model: "claude", tokens: 1200, cost: 0.5, timestamp: now - 60_000 },
+      ],
     })
+
+    expect(snapshots).toEqual([
+      {
+        provider: "local-usage",
+        label: "Local OpenCode usage",
+        fetchedAt: now,
+        status: "degraded",
+        windows: [],
+        detail: "estimated usage only: anthropic/claude 5h 1,200 tokens, wk 1,200 tokens",
+      },
+    ])
+    expect(formatProviderQuotaPrompt(snapshots, "local-usage")).toBeUndefined()
   })
 })
