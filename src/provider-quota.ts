@@ -148,6 +148,10 @@ function formatPromptWindow(window: ProviderQuotaWindow, glyphStyle: GlyphStyle)
   return `${window.label} ${formatQuotaBar(percent, compactQuotaBarWidth, glyphStyle)} ${percent}%`
 }
 
+function formatPromptProvider(snapshot: ProviderQuotaSnapshot) {
+  return snapshot.label || snapshot.provider
+}
+
 export function formatProviderQuotaPrompt(
   snapshots: readonly ProviderQuotaSnapshot[],
   activeProvider?: string,
@@ -161,7 +165,8 @@ export function formatProviderQuotaPrompt(
 
   const parts = visibleProviderQuotaWindows(snapshot).map((window) => formatPromptWindow(window, glyphStyle))
   if (parts.length === 0) return
-  return `${snapshot.provider} ${parts.join(quotaGlyphs(glyphStyle).compactWindowSeparator)}`
+  const separator = quotaGlyphs(glyphStyle).compactWindowSeparator
+  return `${formatPromptProvider(snapshot)}${separator}${parts.join(separator)}`
 }
 
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
