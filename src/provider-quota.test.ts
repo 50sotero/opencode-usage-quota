@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { formatProviderQuotaPrompt, formatProviderQuotaReport, hasNativeProviderQuotaClient, normalizeProviderQuotaSnapshots, readNativeProviderQuota } from "./provider-quota.js"
+import {
+  formatProviderQuotaPrompt,
+  formatProviderQuotaReport,
+  hasNativeProviderQuotaClient,
+  normalizeProviderQuotaSnapshots,
+  readNativeProviderQuota,
+} from "./provider-quota.js"
 
 describe("provider quota model", () => {
   test("keeps exact and reported windows visible in compact prompt output", () => {
@@ -133,5 +139,4 @@ describe("provider quota model", () => {
     expect(formatProviderQuotaReport(snapshots)).toContain("credits: 12/20 reported from official_api")
     expect(formatProviderQuotaReport([])).toContain("No provider quota snapshots")
   })
-
 })

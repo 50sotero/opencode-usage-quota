@@ -134,12 +134,13 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
   return `${snapshot.provider} ${parts.join(" · ")}`
 }
 
-
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
   const parts: string[] = []
   if (window.remainingPercent !== undefined) parts.push(`${Math.round(clampPercent(window.remainingPercent))}%`)
   if (window.remaining !== undefined && window.limit !== undefined) {
-    parts.push(`${Math.round(window.remaining).toLocaleString("en-US")}/${Math.round(window.limit).toLocaleString("en-US")}`)
+    parts.push(
+      `${Math.round(window.remaining).toLocaleString("en-US")}/${Math.round(window.limit).toLocaleString("en-US")}`,
+    )
   } else if (window.remaining !== undefined) {
     parts.push(Math.round(window.remaining).toLocaleString("en-US"))
   }
