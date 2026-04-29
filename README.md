@@ -31,7 +31,32 @@ Use this mode for a locally patched or future upstream OpenCode build that expos
 
 The native OpenCode track should own compact prompt placement. In that mode, this plugin should remain useful for `/quota` details and QA, but avoid rendering a duplicate compact quota row when native provider quota is visibly present.
 
-## Install from this repo
+## Easy install
+
+The recommended install path is OpenCode's built-in plugin installer. It installs the GitHub package and updates your TUI plugin config automatically.
+
+Install globally for every OpenCode project:
+
+```bash
+opencode plugin github:50sotero/opencode-usage-quota --global
+```
+
+Or install only for the current project:
+
+```bash
+opencode plugin github:50sotero/opencode-usage-quota
+```
+
+Restart OpenCode after installing. You should see the compact quota/session row below the chat box, and `/quota` plus `/dashboard` should appear in the command palette.
+
+If you previously installed an early version of this repo and OpenCode added it to `opencode.json(c)`, remove that old server-plugin entry and run the command above again. This package now advertises only its `./tui` entrypoint, so the OpenCode installer writes it to `tui.json(c)` instead of treating it as a server plugin.
+
+### Manual install fallback
+
+Use this if your OpenCode build does not have the `opencode plugin` command yet. Add the plugin to your TUI config:
+
+- Global: `~/.config/opencode/tui.jsonc`
+- Project: `.opencode/tui.jsonc`
 
 ```jsonc
 {
@@ -40,7 +65,9 @@ The native OpenCode track should own compact prompt placement. In that mode, thi
 }
 ```
 
-For local development:
+### Local development install
+
+When hacking on this repo, point OpenCode directly at the local TUI entrypoint:
 
 ```jsonc
 {
