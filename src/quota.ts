@@ -92,20 +92,30 @@ export function formatQuotaBar(percent: number, width: number) {
   return `${"█".repeat(filled)}${"░".repeat(columns - filled)}`
 }
 
-function formatWindow(label: "5h" | "wk", item: QuotaWindow, barWidth: number) {
+function formatWindow(label: "5h" | "wk", item: QuotaWindow) {
   const percent = clampPercent(item.remainingPercent)
-  return `${label} ${formatQuotaBar(percent, barWidth)} ${percent}%`
+  return `${label} ${percent}% left`
+}
+
+function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined) {
+  if (!snapshot?.fiveHour && !snapshot?.weekly) return
+
+  const parts = [
+    snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour) : undefined,
+    snapshot.weekly ? formatWindow("wk", snapshot.weekly) : undefined,
+  ].filter((part): part is string => Boolean(part))
+
+  return parts.join(" · ")
 }
 
 export function formatCodexQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined) {
   if (!snapshot?.fiveHour && !snapshot?.weekly) return
+  return snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour) : formatWindow("wk", snapshot.weekly!)
+}
 
-  const parts = [
-    snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour, 5) : undefined,
-    snapshot.weekly ? formatWindow("wk", snapshot.weekly, 5) : undefined,
-  ].filter((part): part is string => Boolean(part))
-
-  return `codex ${parts.join(" · ")}`
+export function formatUsageQuotaStatus(snapshot: CodexQuotaSnapshot | undefined) {
+  const quota = formatQuotaWindows(snapshot)
+  return quota ? `codex quota ${quota}` : "codex quota unavailable"
 }
 
 export function usageRecordFromMessage(message: unknown, timestamp = Date.now()): UsageRecord | undefined {
@@ -192,19 +202,35 @@ function formatTokens(tokens: number) {
   return Math.round(tokens).toLocaleString("en-US")
 }
 
+function formatPromptTokens(tokens: number) {
+  const rounded = Math.max(0, Math.round(tokens))
+  if (rounded >= 1_000_000) return `${(rounded / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
+  if (rounded >= 1_000) return `${(rounded / 1_000).toFixed(1).replace(/\.0$/, "")}k`
+  return `${rounded.toLocaleString("en-US")}t`
+}
+
 export function formatLocalUsagePrompt(summary: readonly ProviderUsageSummary[]) {
   const [top] = summary
   if (!top) return
-  return `${top.provider} local 5h ${formatTokens(top.fiveHourTokens)}t · wk ${formatTokens(top.weeklyTokens)}t`
+  if (top.fiveHourTokens > 0) return `5h ${formatPromptTokens(top.fiveHourTokens)}`
+  if (top.weeklyTokens > 0) return `wk ${formatPromptTokens(top.weeklyTokens)}`
 }
 
-export function formatUsageQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {
-  return formatCodexQuotaPrompt(snapshot) ?? formatLocalUsagePrompt(summary)
+export function formatUsageQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined, _summary: readonly ProviderUsageSummary[]) {
+  return formatCodexQuotaPrompt(snapshot)
+}
+
+export function truncatePromptLabel(value: string | undefined, maxLength = 32) {
+  if (!value) return
+  const limit = Math.max(1, Math.floor(maxLength))
+  if (value.length <= limit) return value
+  if (limit === 1) return "…"
+  return `${value.slice(0, limit - 1)}…`
 }
 
 export function formatUsageQuotaReport(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {
   const lines = ["Usage quota status", ""]
-  const codex = formatCodexQuotaPrompt(snapshot)
+  const codex = formatQuotaWindows(snapshot)
 
   lines.push(codex ? `Codex remote quota: ${codex}` : "Codex remote quota: unavailable")
   lines.push("")

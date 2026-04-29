@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import {
   formatCodexQuotaPrompt,
+  formatUsageQuotaStatus,
   formatUsageQuotaPrompt,
   formatUsageQuotaReport,
   normalizeCodexQuota,
   summarizeUsage,
+  truncatePromptLabel,
   upsertUsageRecord,
   usageRecordFromEvent,
   usageRecordFromMessage,
@@ -30,7 +32,10 @@ describe("usage quota formatting", () => {
       weekly: { remainingPercent: 94.2, resetSeconds: undefined, resetAt: 1_765_000_000 },
       fetchedAt: now,
     })
-    expect(formatCodexQuotaPrompt(snapshot)).toBe("codex 5h ████░ 88% · wk █████ 94%")
+    expect(formatCodexQuotaPrompt(snapshot)).toBe("5h 88% left")
+    expect(formatCodexQuotaPrompt({ weekly: { remainingPercent: 94.2 } })).toBe("wk 94% left")
+    expect(formatUsageQuotaStatus(snapshot)).toBe("codex quota 5h 88% left · wk 94% left")
+    expect(formatUsageQuotaReport(snapshot, [])).toContain("Codex remote quota: 5h 88% left · wk 94% left")
   })
 
   test("extracts assistant token usage from messages and events", () => {
@@ -80,8 +85,36 @@ describe("usage quota formatting", () => {
         weeklyCost: 0.5,
       },
     ])
-    expect(formatUsageQuotaPrompt(undefined, summary)).toBe("openai local 5h 300t · wk 500t")
+    expect(formatUsageQuotaPrompt(undefined, summary)).toBeUndefined()
     expect(formatUsageQuotaReport(undefined, summary)).toContain("Local OpenCode usage, not provider-enforced quota")
+  })
+
+  test("does not put local token counts in the right-side quota prompt", () => {
+    const summary = [
+      {
+        provider: "anthropic",
+        model: "claude-sonnet",
+        fiveHourTokens: 1_250_000,
+        weeklyTokens: 9_500_000,
+        weeklyCost: 0,
+      },
+    ]
+
+    const prompt = formatUsageQuotaPrompt(undefined, summary)
+
+    expect(prompt).toBeUndefined()
+    expect(formatUsageQuotaPrompt(undefined, [{ ...summary[0], fiveHourTokens: 1_000_000, weeklyTokens: 2_000 }])).toBe(
+      undefined,
+    )
+    expect(formatUsageQuotaPrompt(undefined, [{ ...summary[0], fiveHourTokens: 0, weeklyTokens: 2_000 }])).toBe(
+      undefined,
+    )
+    expect(formatUsageQuotaStatus(undefined)).toBe("codex quota unavailable")
+  })
+
+  test("truncates prompt labels to a terminal-safe width", () => {
+    expect(truncatePromptLabel("123456789", 6)).toBe("12345…")
+    expect(truncatePromptLabel("short", 6)).toBe("short")
   })
 
   test("upserts usage records and prunes stale weekly entries", () => {

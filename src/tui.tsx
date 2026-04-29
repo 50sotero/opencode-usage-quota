@@ -1,33 +1,24 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
-import { Show, createMemo, createSignal } from "solid-js"
+import { createMemo, createSignal } from "solid-js"
 import {
-  formatUsageQuotaPrompt,
   formatUsageQuotaReport,
+  formatUsageQuotaStatus,
   isUsageRecord,
   normalizeCodexQuota,
   summarizeUsage,
   upsertUsageRecord,
   usageRecordFromEvent,
-  usageRecordFromMessage,
   type CodexQuotaSnapshot,
   type UsageRecord,
 } from "./quota.js"
+import { readCodexQuota } from "./codex-quota-client.js"
 
 const id = "opencode-usage-quota"
 const storageKey = "opencode-usage-quota.records"
 
 type Options = {
   refreshMs?: number
-  showLocalUsageFallback?: boolean
-}
-
-type CodexQuotaClient = {
-  experimental?: {
-    console?: {
-      codexQuota?: (input?: { workspace?: string }) => Promise<{ data?: unknown }>
-    }
-  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,27 +28,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseOptions(value: unknown): Required<Options> {
   const record = isRecord(value) ? value : {}
   const refreshMs = typeof record.refreshMs === "number" && Number.isFinite(record.refreshMs) ? record.refreshMs : 60_000
-  const showLocalUsageFallback = typeof record.showLocalUsageFallback === "boolean" ? record.showLocalUsageFallback : true
 
   return {
     refreshMs: Math.max(15_000, refreshMs),
-    showLocalUsageFallback,
   }
-}
-
-function codexQuotaMethod(client: unknown) {
-  if (!isRecord(client)) return
-  const experimental = isRecord(client.experimental) ? client.experimental : undefined
-  const consoleClient = isRecord(experimental?.console) ? experimental.console : undefined
-  const method = consoleClient?.codexQuota
-  if (typeof method !== "function") return
-  return method as CodexQuotaClient["experimental"] extends infer Experimental
-    ? Experimental extends { console?: infer Console }
-      ? Console extends { codexQuota?: infer Method }
-        ? Method
-        : never
-      : never
-    : never
 }
 
 function loadRecords(api: TuiPluginApi) {
@@ -66,23 +40,60 @@ function loadRecords(api: TuiPluginApi) {
   return value.filter(isUsageRecord)
 }
 
-function rememberRecord(api: TuiPluginApi, setRecords: (records: UsageRecord[]) => void, records: readonly UsageRecord[], record: UsageRecord) {
-  const next = upsertUsageRecord(records, record)
-  api.kv.set(storageKey, next)
-  setRecords(next)
+type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
+
+function QuotaStatusText(props: { api: TuiPluginApi; snapshot: CodexQuotaSnapshot | undefined }) {
+  const label = createMemo(() => formatUsageQuotaStatus(props.snapshot))
+
+  return <text fg={props.api.theme.current.textMuted}>{label()}</text>
 }
 
-function View(props: {
+function BelowPromptStatus(props: { api: TuiPluginApi; snapshot: CodexQuotaSnapshot | undefined; block?: boolean }) {
+  if (props.block) {
+    return (
+      <box width="100%" height={1} alignItems="center" justifyContent="center">
+        <QuotaStatusText
+          api={props.api}
+          snapshot={props.snapshot}
+        />
+      </box>
+    )
+  }
+
+  return (
+    <QuotaStatusText
+      api={props.api}
+      snapshot={props.snapshot}
+    />
+  )
+}
+
+function SessionPromptWithStatus(props: {
   api: TuiPluginApi
   snapshot: CodexQuotaSnapshot | undefined
-  records: readonly UsageRecord[]
-  showLocalUsageFallback: boolean
+  sessionID: string
+  visible?: boolean
+  disabled?: boolean
+  onSubmit?: () => void
+  promptRef?: PromptRef
 }) {
-  const label = createMemo(() =>
-    formatUsageQuotaPrompt(props.snapshot, props.showLocalUsageFallback ? summarizeUsage(props.records) : []),
+  return (
+    <box flexDirection="column" flexShrink={0}>
+      <props.api.ui.Prompt
+        sessionID={props.sessionID}
+        visible={props.visible}
+        disabled={props.disabled}
+        onSubmit={props.onSubmit}
+        ref={props.promptRef}
+      />
+      <box width="100%" height={1} flexDirection="row" justifyContent="flex-end" paddingRight={2}>
+        <QuotaStatusText
+          api={props.api}
+          snapshot={props.snapshot}
+        />
+      </box>
+    </box>
   )
-
-  return <Show when={label()}>{(value) => <text fg={props.api.theme.current.textMuted}>{value()}</text>}</Show>
 }
 
 export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
@@ -91,12 +102,9 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
 
   async function refreshCodexQuota() {
-    const method = codexQuotaMethod(api.client)
-    if (!method) return
-
     try {
-      const result = await method({})
-      setSnapshot(normalizeCodexQuota(result.data))
+      const result = await readCodexQuota(api.client)
+      setSnapshot(normalizeCodexQuota(result))
     } catch {
       setSnapshot(undefined)
     }
@@ -104,7 +112,9 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
 
   function remember(record: UsageRecord | undefined) {
     if (!record) return
-    rememberRecord(api, setRecords, records(), record)
+    const next = upsertUsageRecord(records(), record)
+    api.kv.set(storageKey, next)
+    setRecords(next)
   }
 
   const stopEvent = api.event.on("message.updated", (event) => {
@@ -117,29 +127,27 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   api.lifecycle.onDispose(() => clearInterval(timer))
 
   api.slots.register({
-    order: 200,
+    order: 90,
     slots: {
-      session_prompt_right(_ctx, props) {
-        for (const message of api.state.session.messages(props.session_id)) {
-          remember(usageRecordFromMessage(message))
-        }
-
+      session_prompt(_context, props) {
         return (
-          <View
+          <SessionPromptWithStatus
             api={api}
             snapshot={snapshot()}
-            records={records()}
-            showLocalUsageFallback={options.showLocalUsageFallback}
+            sessionID={props.session_id}
+            visible={props.visible}
+            disabled={props.disabled}
+            onSubmit={props.on_submit}
+            promptRef={props.ref}
           />
         )
       },
-      home_prompt_right() {
+      home_bottom() {
         return (
-          <View
+          <BelowPromptStatus
             api={api}
             snapshot={snapshot()}
-            records={records()}
-            showLocalUsageFallback={options.showLocalUsageFallback}
+            block
           />
         )
       },

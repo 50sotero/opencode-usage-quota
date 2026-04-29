@@ -9,3 +9,4 @@ qa/*-data/
 qa/*-cache/
 qa/*-state/
 qa/*-opencode-config-dir/
+qa/*/
