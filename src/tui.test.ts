@@ -31,12 +31,19 @@ describe("usage quota TUI plugin render safety", () => {
     expect(source).not.toContain("home_prompt_right")
   })
 
-  test("registers quota command and gates compact rows behind native quota detection", () => {
+  test("keeps the /quota detail command available in native and stock modes", () => {
     const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
 
+    expect(source).toContain("api.command.register")
     expect(source).toContain('name: "quota"')
-    expect(source).toContain("readProviderQuotas")
-    expect(source).toContain("hasNativeProviderQuota")
-    expect(source).toContain("if (!hasNativeProviderQuota(api))")
+    expect(source).toContain('aliases: ["usage-quota"]')
+  })
+
+  test("guards compact prompt slots behind native provider quota detection", () => {
+    const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
+
+    expect(source).toContain("function hasNativeProviderQuota")
+    expect(source).toContain("const nativeProviderQuota = hasNativeProviderQuota(api.client)")
+    expect(source).toContain("if (!nativeProviderQuota)")
   })
 })
