@@ -136,7 +136,8 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
 
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
   const parts: string[] = []
-  if (window.remainingPercent !== undefined) parts.push(`${Math.round(clampPercent(window.remainingPercent))}%`)
+  if (window.remainingPercent !== undefined)
+    parts.push(`${Math.round(clampProviderQuotaPercent(window.remainingPercent))}%`)
   if (window.remaining !== undefined && window.limit !== undefined) {
     parts.push(
       `${Math.round(window.remaining).toLocaleString("en-US")}/${Math.round(window.limit).toLocaleString("en-US")}`,
@@ -169,9 +170,6 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   )
   return lines.join("\n").trimEnd()
 }
-
-type ProviderQuotaClientMethod = (input?: unknown) => Promise<{ data?: unknown }>
-type RawClientGetMethod = (input: { url: string }) => Promise<{ data?: unknown }>
 
 function generatedProviderQuotaReader(client: unknown) {
   if (!isRecord(client)) return
