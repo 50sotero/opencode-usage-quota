@@ -9,11 +9,12 @@ import {
 
 describe("provider quota model", () => {
   test("keeps exact and reported windows visible in compact prompt output", () => {
+    const fetchedAt = Date.UTC(2026, 3, 29, 9, 5)
     const snapshots = normalizeProviderQuotaSnapshots([
       {
         provider: "codex",
         label: "Codex",
-        fetchedAt: 1,
+        fetchedAt,
         status: "available",
         windows: [
           { label: "5h", remainingPercent: 97.4, confidence: "exact", source: "official_api" },
@@ -23,9 +24,12 @@ describe("provider quota model", () => {
     ])
 
     const prompt = formatProviderQuotaPrompt(snapshots, "codex")
+    const updatedAt = new Date(fetchedAt).toTimeString().slice(0, 5)
 
-    expect(prompt).toBe("Codex · 5h ██████████ 97% · wk █████████░ 90%")
-    expect(formatProviderQuotaPrompt(snapshots, "codex", "ascii")).toBe("Codex | 5h ########## 97% | wk #########- 90%")
+    expect(prompt).toBe(`Codex · 5h ██████████ 97% · wk █████████░ 90% · updated ${updatedAt}`)
+    expect(formatProviderQuotaPrompt(snapshots, "codex", "ascii")).toBe(
+      `Codex | 5h ########## 97% | wk #########- 90% | updated ${updatedAt}`,
+    )
   })
 
   test("hides estimated-only windows from compact prompt output", () => {
@@ -86,7 +90,10 @@ describe("provider quota model", () => {
         ],
       },
     ])
-    expect(formatProviderQuotaPrompt(snapshots)).toBe("Anthropic · req ██████████ 100% · tok ░░░░░░░░░░ 0%")
+    const updatedAt = new Date(1).toTimeString().slice(0, 5)
+    expect(formatProviderQuotaPrompt(snapshots)).toBe(
+      `Anthropic · req ██████████ 100% · tok ░░░░░░░░░░ 0% · updated ${updatedAt}`,
+    )
   })
 
   test("prefers active provider but falls back to first visible exact or reported quota", () => {
@@ -107,8 +114,11 @@ describe("provider quota model", () => {
       },
     ])
 
-    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("Codex · 5h ██████████ 97%")
-    expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe("Gemini · rpm ███████░░░ 71%")
+    const updatedAt = new Date(1).toTimeString().slice(0, 5)
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe(`Codex · 5h ██████████ 97% · updated ${updatedAt}`)
+    expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe(
+      `Gemini · rpm ███████░░░ 71% · updated ${updatedAt}`,
+    )
   })
 
   test("reads native OpenCode provider quota snapshots from generated clients", async () => {

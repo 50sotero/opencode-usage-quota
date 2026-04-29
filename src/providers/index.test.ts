@@ -65,8 +65,9 @@ describe("provider quota adapter registry", () => {
         ],
       },
     ])
+    const updatedAt = new Date(7).toTimeString().slice(0, 5)
     expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe(
-      "Codex · 5h ██████████ 97% · wk █████████░ 90%",
+      `Codex · 5h ██████████ 97% · wk █████████░ 90% · updated ${updatedAt}`,
     )
   })
 

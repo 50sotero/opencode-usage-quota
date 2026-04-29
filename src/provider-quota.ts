@@ -152,6 +152,14 @@ function formatPromptProvider(snapshot: ProviderQuotaSnapshot) {
   return snapshot.label || snapshot.provider
 }
 
+function formatUpdatedAt(fetchedAt: number) {
+  const date = new Date(fetchedAt)
+  if (Number.isNaN(date.getTime())) return
+  const hh = date.getHours().toString().padStart(2, "0")
+  const mm = date.getMinutes().toString().padStart(2, "0")
+  return `updated ${hh}:${mm}`
+}
+
 export function formatProviderQuotaPrompt(
   snapshots: readonly ProviderQuotaSnapshot[],
   activeProvider?: string,
@@ -166,7 +174,10 @@ export function formatProviderQuotaPrompt(
   const parts = visibleProviderQuotaWindows(snapshot).map((window) => formatPromptWindow(window, glyphStyle))
   if (parts.length === 0) return
   const separator = quotaGlyphs(glyphStyle).compactWindowSeparator
-  return `${formatPromptProvider(snapshot)}${separator}${parts.join(separator)}`
+  const updated = formatUpdatedAt(snapshot.fetchedAt)
+  return [formatPromptProvider(snapshot), ...parts, updated]
+    .filter((part): part is string => Boolean(part))
+    .join(separator)
 }
 
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
