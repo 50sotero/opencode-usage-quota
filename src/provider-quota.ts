@@ -123,9 +123,27 @@ function snapshotWithPromptWindows(snapshots: readonly ProviderQuotaSnapshot[], 
   return preferred ?? snapshots.find((snapshot) => visibleProviderQuotaWindows(snapshot).length > 0)
 }
 
+function unavailableSnapshot(snapshots: readonly ProviderQuotaSnapshot[], provider?: string) {
+  const preferred = provider
+    ? snapshots.find((snapshot) => snapshot.provider === provider && snapshot.status === "unavailable")
+    : undefined
+  return (
+    preferred ??
+    snapshots.find((snapshot) => snapshot.provider === "codex" && snapshot.status === "unavailable") ??
+    snapshots.find((snapshot) => snapshot.status === "unavailable")
+  )
+}
+
+function formatUnavailablePrompt(snapshot: ProviderQuotaSnapshot | undefined) {
+  return `${snapshot?.provider ?? "codex"} quota unavailable`
+}
+
 export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnapshot[], activeProvider?: string) {
   const snapshot = snapshotWithPromptWindows(snapshots, activeProvider)
-  if (!snapshot) return
+  if (!snapshot) {
+    const unavailable = unavailableSnapshot(snapshots, activeProvider)
+    return unavailable || snapshots.length === 0 ? formatUnavailablePrompt(unavailable) : undefined
+  }
 
   const parts = visibleProviderQuotaWindows(snapshot).map(
     (window) => `${window.label} ${Math.round(clampProviderQuotaPercent(window.remainingPercent!))}%`,

@@ -39,6 +39,22 @@ describe("provider quota model", () => {
     expect(formatProviderQuotaPrompt(snapshots, "copilot")).toBeUndefined()
   })
 
+  test("keeps compact prompt visible when codex quota is not available yet", () => {
+    const snapshots = normalizeProviderQuotaSnapshots([
+      {
+        provider: "codex",
+        label: "Codex",
+        fetchedAt: 1,
+        status: "unavailable",
+        windows: [],
+        detail: "codex quota unavailable",
+      },
+    ])
+
+    expect(formatProviderQuotaPrompt([])).toBe("codex quota unavailable")
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex quota unavailable")
+  })
+
   test("drops malformed snapshots and clamps non-exact provider percentages", () => {
     const snapshots = normalizeProviderQuotaSnapshots([
       null,
