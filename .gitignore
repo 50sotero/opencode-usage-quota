@@ -10,3 +10,5 @@ qa/*-cache/
 qa/*-state/
 qa/*-opencode-config-dir/
 qa/*/
+.omx/
+codedb.snapshot
