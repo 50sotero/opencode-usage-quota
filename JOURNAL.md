@@ -1,5 +1,14 @@
 # Development journal
 
+## 2026-04-29
+
+- Reviewed the current standalone plugin code against the committed provider-quota design and two-track implementation plan. The existing implementation still has a Codex-first model: `src/tui.tsx` fetches `experimental.console.codexQuota`, renders a compact Codex status under prompt rows, records assistant usage from `message.updated` events, and keeps local provider usage in the `/quota` dialog.
+- Code-quality review finding: `src/tui.test.ts` already guards the earlier memory/regression risk by asserting prompt rendering does not persist usage records and that the plugin does not use the right-side prompt slots. No code edits were needed for that path in this documentation pass.
+- Documentation correction: the README previously implied a compact local-usage fallback such as `openai local 5h ...`; the code intentionally returns no compact local-provider prompt. Non-Codex provider data is local usage/estimated detail data unless a provider adapter supplies `exact` or `reported` evidence.
+- Updated the public docs to describe the two install modes: stock OpenCode plugin mode and native OpenCode provider-quota mode. The native track should own prompt-metrics placement and the plugin should avoid duplicate compact quota rows when native quota is visibly present.
+- Updated QA instructions to use the memory cage from the plan (`OPENCODE_MEMORY_CAP_KB=1200000`) for home and prompted-session captures, with a warning that prompted captures can contact a provider.
+- Verification before and after the documentation edits: `bun test`, `bun run typecheck`, and `bun run build` passed in the worker worktree on 2026-04-29.
+
 ## 2026-04-28
 
 - Created the standalone `opencode-usage-quota` repo from the empty public GitHub repository at `https://github.com/50sotero/opencode-usage-quota`.
