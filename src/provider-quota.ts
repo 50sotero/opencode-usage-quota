@@ -154,17 +154,26 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   return lines.join("\n").trimEnd()
 }
 
+type ProviderQuotaClientMethod = (input?: unknown) => Promise<{ data?: unknown }>
+type RawClientGetMethod = (input: { url: string }) => Promise<{ data?: unknown }>
+
 function generatedProviderQuotaReader(client: unknown) {
   if (!isRecord(client)) return
   const experimental = isRecord(client.experimental) ? client.experimental : undefined
   const providerQuota = experimental?.providerQuota
-  if (typeof providerQuota === "function") return async () => (await providerQuota({})).data
-  if (isRecord(providerQuota)) {
-    if (typeof providerQuota.get === "function") return async () => (await providerQuota.get({})).data
-    if (typeof providerQuota.list === "function") return async () => (await providerQuota.list({})).data
+  if (typeof providerQuota === "function") {
+    const method = providerQuota as ProviderQuotaClientMethod
+    return async () => (await method({})).data
   }
-  if (isRecord(experimental) && typeof experimental.providerQuota === "function") {
-    return async () => (await experimental.providerQuota({})).data
+  if (isRecord(providerQuota)) {
+    if (typeof providerQuota.get === "function") {
+      const method = providerQuota.get as ProviderQuotaClientMethod
+      return async () => (await method({})).data
+    }
+    if (typeof providerQuota.list === "function") {
+      const method = providerQuota.list as ProviderQuotaClientMethod
+      return async () => (await method({})).data
+    }
   }
 }
 
@@ -172,7 +181,8 @@ function rawProviderQuotaReader(client: unknown) {
   if (!isRecord(client)) return
   const rawClient = isRecord(client.client) ? client.client : undefined
   if (typeof rawClient?.get !== "function") return
-  return async () => (await rawClient.get({ url: "/experimental/provider-quota" })).data
+  const get = rawClient.get as RawClientGetMethod
+  return async () => (await get({ url: "/experimental/provider-quota" })).data
 }
 
 export function hasNativeProviderQuotaClient(client: unknown) {

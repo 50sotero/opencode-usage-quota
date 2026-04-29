@@ -33,7 +33,8 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "keeper": "bun src/keeper.ts"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -67,5 +68,8 @@
     "quota",
     "usage",
     "codex"
-  ]
+  ],
+  "bin": {
+    "opencode-quota-keeper": "./src/keeper.ts"
+  }
 }
