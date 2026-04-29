@@ -46,11 +46,11 @@ function loadRecords(api: TuiPluginApi) {
   return value.filter(isUsageRecord)
 }
 
-export function hasNativeProviderQuota(client: unknown) {
-  return hasNativeProviderQuotaClient(client)
-}
-
 type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
+
+export function hasNativeProviderQuota(api: TuiPluginApi) {
+  return hasNativeProviderQuotaClient(api.client)
+}
 
 function QuotaStatusText(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[] }) {
   const label = createMemo(() => formatProviderQuotaPrompt(props.snapshots))
@@ -108,13 +108,12 @@ function SessionPromptWithStatus(props: {
 
 export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const options = parseOptions(rawOptions)
-  const nativeProviderQuota = hasNativeProviderQuota(api.client)
   const [snapshots, setSnapshots] = createSignal<ProviderQuotaSnapshot[]>([])
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
 
   async function refreshProviderQuota() {
     try {
-      if (nativeProviderQuota) {
+      if (hasNativeProviderQuota(api)) {
         setSnapshots(await readNativeProviderQuota(api.client))
         return
       }
@@ -143,7 +142,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const timer = setInterval(refreshProviderQuota, options.refreshMs)
   api.lifecycle.onDispose(() => clearInterval(timer))
 
-  if (!nativeProviderQuota) {
+  if (!hasNativeProviderQuota(api)) {
     api.slots.register({
       order: 90,
       slots: {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { copyFile, readFile, stat } from "node:fs/promises"
 import { homedir } from "node:os"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { spawn } from "node:child_process"
 
 export type KeeperRepairStep =
