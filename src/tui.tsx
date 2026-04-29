@@ -2,20 +2,26 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createMemo, createSignal } from "solid-js"
 import {
-  formatUsageQuotaReport,
-  formatUsageQuotaStatus,
+  formatProviderQuotaPrompt,
+  formatProviderQuotaReport,
+  hasNativeProviderQuotaClient,
+  normalizeProviderQuotaSnapshots,
+  readNativeProviderQuota,
+  type ProviderQuotaSnapshot,
+} from "./provider-quota.js"
+import {
   isUsageRecord,
-  normalizeCodexQuota,
-  summarizeUsage,
   upsertUsageRecord,
   usageRecordFromEvent,
-  type CodexQuotaSnapshot,
   type UsageRecord,
 } from "./quota.js"
-import { readCodexQuota } from "./codex-quota-client.js"
+import { readProviderQuotas } from "./providers/index.js"
+import { codexQuotaAdapter } from "./providers/codex.js"
+import { localUsageAdapter } from "./providers/local-usage.js"
 
 const id = "opencode-usage-quota"
 const storageKey = "opencode-usage-quota.records"
+const adapters = [codexQuotaAdapter, localUsageAdapter]
 
 type Options = {
   refreshMs?: number
@@ -42,19 +48,23 @@ function loadRecords(api: TuiPluginApi) {
 
 type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
 
-function QuotaStatusText(props: { api: TuiPluginApi; snapshot: CodexQuotaSnapshot | undefined }) {
-  const label = createMemo(() => formatUsageQuotaStatus(props.snapshot))
-
-  return <text fg={props.api.theme.current.textMuted}>{label()}</text>
+export function hasNativeProviderQuota(api: TuiPluginApi) {
+  return hasNativeProviderQuotaClient(api.client)
 }
 
-function BelowPromptStatus(props: { api: TuiPluginApi; snapshot: CodexQuotaSnapshot | undefined; block?: boolean }) {
+function QuotaStatusText(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[] }) {
+  const label = createMemo(() => formatProviderQuotaPrompt(props.snapshots))
+
+  return <text fg={props.api.theme.current.textMuted}>{label() ?? ""}</text>
+}
+
+function BelowPromptStatus(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[]; block?: boolean }) {
   if (props.block) {
     return (
       <box width="100%" height={1} alignItems="center" justifyContent="center">
         <QuotaStatusText
           api={props.api}
-          snapshot={props.snapshot}
+          snapshots={props.snapshots}
         />
       </box>
     )
@@ -63,14 +73,14 @@ function BelowPromptStatus(props: { api: TuiPluginApi; snapshot: CodexQuotaSnaps
   return (
     <QuotaStatusText
       api={props.api}
-      snapshot={props.snapshot}
+      snapshots={props.snapshots}
     />
   )
 }
 
 function SessionPromptWithStatus(props: {
   api: TuiPluginApi
-  snapshot: CodexQuotaSnapshot | undefined
+  snapshots: readonly ProviderQuotaSnapshot[]
   sessionID: string
   visible?: boolean
   disabled?: boolean
@@ -89,7 +99,7 @@ function SessionPromptWithStatus(props: {
       <box width="100%" height={1} flexDirection="row" justifyContent="flex-end" paddingRight={2}>
         <QuotaStatusText
           api={props.api}
-          snapshot={props.snapshot}
+          snapshots={props.snapshots}
         />
       </box>
     </box>
@@ -98,15 +108,20 @@ function SessionPromptWithStatus(props: {
 
 export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const options = parseOptions(rawOptions)
-  const [snapshot, setSnapshot] = createSignal<CodexQuotaSnapshot>()
+  const [snapshots, setSnapshots] = createSignal<ProviderQuotaSnapshot[]>([])
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
 
-  async function refreshCodexQuota() {
+  async function refreshProviderQuota() {
     try {
-      const result = await readCodexQuota(api.client)
-      setSnapshot(normalizeCodexQuota(result))
+      if (hasNativeProviderQuota(api)) {
+        setSnapshots(await readNativeProviderQuota(api.client))
+        return
+      }
+
+      const result = await readProviderQuotas(adapters, { client: api.client, records: records() })
+      setSnapshots(normalizeProviderQuotaSnapshots(result))
     } catch {
-      setSnapshot(undefined)
+      setSnapshots([])
     }
   }
 
@@ -115,6 +130,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
     const next = upsertUsageRecord(records(), record)
     api.kv.set(storageKey, next)
     setRecords(next)
+    refreshProviderQuota()
   }
 
   const stopEvent = api.event.on("message.updated", (event) => {
@@ -122,44 +138,46 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   })
   api.lifecycle.onDispose(stopEvent)
 
-  refreshCodexQuota()
-  const timer = setInterval(refreshCodexQuota, options.refreshMs)
+  refreshProviderQuota()
+  const timer = setInterval(refreshProviderQuota, options.refreshMs)
   api.lifecycle.onDispose(() => clearInterval(timer))
 
-  api.slots.register({
-    order: 90,
-    slots: {
-      session_prompt(_context, props) {
-        return (
-          <SessionPromptWithStatus
-            api={api}
-            snapshot={snapshot()}
-            sessionID={props.session_id}
-            visible={props.visible}
-            disabled={props.disabled}
-            onSubmit={props.on_submit}
-            promptRef={props.ref}
-          />
-        )
+  if (!hasNativeProviderQuota(api)) {
+    api.slots.register({
+      order: 90,
+      slots: {
+        session_prompt(_context, props) {
+          return (
+            <SessionPromptWithStatus
+              api={api}
+              snapshots={snapshots()}
+              sessionID={props.session_id}
+              visible={props.visible}
+              disabled={props.disabled}
+              onSubmit={props.on_submit}
+              promptRef={props.ref}
+            />
+          )
+        },
+        home_bottom() {
+          return (
+            <BelowPromptStatus
+              api={api}
+              snapshots={snapshots()}
+              block
+            />
+          )
+        },
       },
-      home_bottom() {
-        return (
-          <BelowPromptStatus
-            api={api}
-            snapshot={snapshot()}
-            block
-          />
-        )
-      },
-    },
-  })
+    })
+  }
 
   const unregisterCommand = api.command.register(() => [
     {
-      title: "Show Usage Quota",
+      title: "Show Provider Quota",
       value: "usage-quota.open",
       category: "Usage",
-      description: "Show Codex quota and local provider usage windows",
+      description: "Show provider quota and local usage confidence labels",
       slash: {
         name: "quota",
         aliases: ["usage-quota"],
@@ -167,8 +185,8 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
       onSelect() {
         api.ui.dialog.replace(() => (
           <api.ui.DialogAlert
-            title="Usage quota"
-            message={formatUsageQuotaReport(snapshot(), summarizeUsage(records()))}
+            title="Provider quota"
+            message={formatProviderQuotaReport(snapshots())}
             onConfirm={() => api.ui.dialog.clear()}
           />
         ))

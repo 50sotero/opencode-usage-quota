@@ -30,4 +30,13 @@ describe("usage quota TUI plugin render safety", () => {
     expect(source).toContain("order: 90")
     expect(source).not.toContain("home_prompt_right")
   })
+
+  test("registers quota command and gates compact rows behind native quota detection", () => {
+    const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
+
+    expect(source).toContain('name: "quota"')
+    expect(source).toContain("readProviderQuotas")
+    expect(source).toContain("hasNativeProviderQuota")
+    expect(source).toContain("if (!hasNativeProviderQuota(api))")
+  })
 })
