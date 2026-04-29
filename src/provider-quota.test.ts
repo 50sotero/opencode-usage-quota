@@ -24,7 +24,7 @@ describe("provider quota model", () => {
     ])
 
     const prompt = formatProviderQuotaPrompt(snapshots, "codex")
-    const updatedAt = new Date(fetchedAt).toTimeString().slice(0, 5)
+    const updatedAt = new Date(fetchedAt).toTimeString().slice(0, 8)
 
     expect(prompt).toBe(`Codex · 5h ██████████ 97% · wk █████████░ 90% · updated ${updatedAt}`)
     expect(formatProviderQuotaPrompt(snapshots, "codex", "ascii")).toBe(
@@ -90,7 +90,7 @@ describe("provider quota model", () => {
         ],
       },
     ])
-    const updatedAt = new Date(1).toTimeString().slice(0, 5)
+    const updatedAt = new Date(1).toTimeString().slice(0, 8)
     expect(formatProviderQuotaPrompt(snapshots)).toBe(
       `Anthropic · req ██████████ 100% · tok ░░░░░░░░░░ 0% · updated ${updatedAt}`,
     )
@@ -114,7 +114,7 @@ describe("provider quota model", () => {
       },
     ])
 
-    const updatedAt = new Date(1).toTimeString().slice(0, 5)
+    const updatedAt = new Date(1).toTimeString().slice(0, 8)
     expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe(`Codex · 5h ██████████ 97% · updated ${updatedAt}`)
     expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe(
       `Gemini · rpm ███████░░░ 71% · updated ${updatedAt}`,

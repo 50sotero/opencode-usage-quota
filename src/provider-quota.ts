@@ -157,7 +157,8 @@ function formatUpdatedAt(fetchedAt: number) {
   if (Number.isNaN(date.getTime())) return
   const hh = date.getHours().toString().padStart(2, "0")
   const mm = date.getMinutes().toString().padStart(2, "0")
-  return `updated ${hh}:${mm}`
+  const ss = date.getSeconds().toString().padStart(2, "0")
+  return `updated ${hh}:${mm}:${ss}`
 }
 
 export function formatProviderQuotaPrompt(
