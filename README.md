@@ -77,7 +77,7 @@ For local development:
 Example compact status:
 
 ```text
-codex quota 5h 88% left · wk 94% left
+codex quota 5h █████████░ 88% left · wk █████████░ 94% left
 ```
 
 Fallback when Codex remote quota is unavailable:

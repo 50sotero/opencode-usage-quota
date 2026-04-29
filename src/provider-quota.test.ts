@@ -24,8 +24,8 @@ describe("provider quota model", () => {
 
     const prompt = formatProviderQuotaPrompt(snapshots, "codex")
 
-    expect(prompt).toBe("codex 5h 97% · wk 90%")
-    expect(formatProviderQuotaPrompt(snapshots, "codex", "ascii")).toBe("codex 5h 97% | wk 90%")
+    expect(prompt).toBe("codex 5h ██████████ 97% · wk █████████░ 90%")
+    expect(formatProviderQuotaPrompt(snapshots, "codex", "ascii")).toBe("codex 5h ########## 97% | wk #########- 90%")
   })
 
   test("hides estimated-only windows from compact prompt output", () => {
@@ -86,7 +86,7 @@ describe("provider quota model", () => {
         ],
       },
     ])
-    expect(formatProviderQuotaPrompt(snapshots)).toBe("anthropic req 100% · tok 0%")
+    expect(formatProviderQuotaPrompt(snapshots)).toBe("anthropic req ██████████ 100% · tok ░░░░░░░░░░ 0%")
   })
 
   test("prefers active provider but falls back to first visible exact or reported quota", () => {
@@ -107,8 +107,8 @@ describe("provider quota model", () => {
       },
     ])
 
-    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 97%")
-    expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe("gemini rpm 71%")
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h ██████████ 97%")
+    expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe("gemini rpm ███████░░░ 71%")
   })
 
   test("reads native OpenCode provider quota snapshots from generated clients", async () => {

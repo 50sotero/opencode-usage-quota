@@ -33,16 +33,18 @@ describe("usage quota formatting", () => {
       weekly: { remainingPercent: 94.2, resetSeconds: undefined, resetAt: 1_765_000_000 },
       fetchedAt: now,
     })
-    expect(formatCodexQuotaPrompt(snapshot)).toBe("5h 88% left")
-    expect(formatCodexQuotaPrompt({ weekly: { remainingPercent: 94.2 } })).toBe("wk 94% left")
+    expect(formatCodexQuotaPrompt(snapshot)).toBe("5h █████████░ 88% left")
+    expect(formatCodexQuotaPrompt({ weekly: { remainingPercent: 94.2 } })).toBe("wk █████████░ 94% left")
     const status = formatUsageQuotaStatus(snapshot)
     const report = formatUsageQuotaReport(snapshot, [])
 
-    expect(status).toBe("codex quota 5h 88% left · wk 94% left")
-    expect(formatUsageQuotaStatus(snapshot, "ascii")).toBe("codex quota 5h 88% left | wk 94% left")
-    expect(report).toContain("Codex remote quota: 5h 88% left · wk 94% left")
+    expect(status).toBe("codex quota 5h █████████░ 88% left · wk █████████░ 94% left")
+    expect(formatUsageQuotaStatus(snapshot, "ascii")).toBe(
+      "codex quota 5h #########- 88% left | wk #########- 94% left",
+    )
+    expect(report).toContain("Codex remote quota: 5h █████████░ 88% left · wk █████████░ 94% left")
     expect(formatUsageQuotaReport(snapshot, [], "ascii")).toContain(
-      "Codex remote quota: 5h 88% left | wk 94% left",
+      "Codex remote quota: 5h #########- 88% left | wk #########- 94% left",
     )
   })
 

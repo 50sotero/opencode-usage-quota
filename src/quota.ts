@@ -95,17 +95,19 @@ export function formatQuotaBar(percent: number, width: number, glyphStyle: Glyph
   return `${glyphs.barFilled.repeat(filled)}${glyphs.barEmpty.repeat(columns - filled)}`
 }
 
-function formatWindow(label: "5h" | "wk", item: QuotaWindow) {
+const compactQuotaBarWidth = 10
+
+function formatWindow(label: "5h" | "wk", item: QuotaWindow, glyphStyle: GlyphStyle = "unicode") {
   const percent = clampPercent(item.remainingPercent)
-  return `${label} ${percent}% left`
+  return `${label} ${formatQuotaBar(percent, compactQuotaBarWidth, glyphStyle)} ${percent}% left`
 }
 
 function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined, glyphStyle: GlyphStyle = "unicode") {
   if (!snapshot?.fiveHour && !snapshot?.weekly) return
 
   const parts = [
-    snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour) : undefined,
-    snapshot.weekly ? formatWindow("wk", snapshot.weekly) : undefined,
+    snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour, glyphStyle) : undefined,
+    snapshot.weekly ? formatWindow("wk", snapshot.weekly, glyphStyle) : undefined,
   ].filter((part): part is string => Boolean(part))
 
   return parts.join(quotaGlyphs(glyphStyle).compactWindowSeparator)

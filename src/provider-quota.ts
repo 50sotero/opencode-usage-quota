@@ -1,4 +1,5 @@
 import { quotaGlyphs, type GlyphStyle } from "./glyphs.js"
+import { formatQuotaBar } from "./quota.js"
 
 export type ProviderQuotaConfidence = "exact" | "reported" | "estimated"
 export type ProviderQuotaSource = "official_api" | "response_headers" | "client_state" | "heuristic"
@@ -140,6 +141,13 @@ function formatUnavailablePrompt(snapshot: ProviderQuotaSnapshot | undefined) {
   return `${snapshot?.provider ?? "codex"} quota unavailable`
 }
 
+const compactQuotaBarWidth = 10
+
+function formatPromptWindow(window: ProviderQuotaWindow, glyphStyle: GlyphStyle) {
+  const percent = Math.round(clampProviderQuotaPercent(window.remainingPercent!))
+  return `${window.label} ${formatQuotaBar(percent, compactQuotaBarWidth, glyphStyle)} ${percent}%`
+}
+
 export function formatProviderQuotaPrompt(
   snapshots: readonly ProviderQuotaSnapshot[],
   activeProvider?: string,
@@ -151,9 +159,7 @@ export function formatProviderQuotaPrompt(
     return unavailable || snapshots.length === 0 ? formatUnavailablePrompt(unavailable) : undefined
   }
 
-  const parts = visibleProviderQuotaWindows(snapshot).map(
-    (window) => `${window.label} ${Math.round(clampProviderQuotaPercent(window.remainingPercent!))}%`,
-  )
+  const parts = visibleProviderQuotaWindows(snapshot).map((window) => formatPromptWindow(window, glyphStyle))
   if (parts.length === 0) return
   return `${snapshot.provider} ${parts.join(quotaGlyphs(glyphStyle).compactWindowSeparator)}`
 }
