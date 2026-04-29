@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   formatCodexQuotaPrompt,
+  formatQuotaBar,
   formatUsageQuotaStatus,
   formatUsageQuotaPrompt,
   formatUsageQuotaReport,
@@ -34,8 +35,13 @@ describe("usage quota formatting", () => {
     })
     expect(formatCodexQuotaPrompt(snapshot)).toBe("5h 88% left")
     expect(formatCodexQuotaPrompt({ weekly: { remainingPercent: 94.2 } })).toBe("wk 94% left")
-    expect(formatUsageQuotaStatus(snapshot)).toBe("codex quota 5h 88% left · wk 94% left")
-    expect(formatUsageQuotaReport(snapshot, [])).toContain("Codex remote quota: 5h 88% left · wk 94% left")
+    const status = formatUsageQuotaStatus(snapshot)
+    const report = formatUsageQuotaReport(snapshot, [])
+
+    expect(status).toBe("codex quota 5h 88% left | wk 94% left")
+    expect(status).toMatch(/^[\x20-\x7e]*$/)
+    expect(report).toContain("Codex remote quota: 5h 88% left | wk 94% left")
+    expect(report).toMatch(/^[\x09\x0a\x0d\x20-\x7e]*$/)
   })
 
   test("extracts assistant token usage from messages and events", () => {
@@ -113,8 +119,13 @@ describe("usage quota formatting", () => {
   })
 
   test("truncates prompt labels to a terminal-safe width", () => {
-    expect(truncatePromptLabel("123456789", 6)).toBe("12345…")
+    expect(truncatePromptLabel("123456789", 6)).toBe("123...")
     expect(truncatePromptLabel("short", 6)).toBe("short")
+  })
+
+  test("formats quota bars with single-width ASCII characters", () => {
+    expect(formatQuotaBar(50, 6)).toBe("###---")
+    expect(formatQuotaBar(50, 6)).toMatch(/^[\x20-\x7e]*$/)
   })
 
   test("upserts usage records and prunes stale weekly entries", () => {

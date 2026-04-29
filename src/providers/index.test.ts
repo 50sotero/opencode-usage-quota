@@ -65,7 +65,7 @@ describe("provider quota adapter registry", () => {
         ],
       },
     ])
-    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 97% · wk 90%")
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 97% | wk 90%")
   })
 
   test("labels local usage as estimated detail data and keeps it out of compact prompt", async () => {

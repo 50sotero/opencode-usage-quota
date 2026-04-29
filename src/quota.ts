@@ -89,7 +89,7 @@ export function clampPercent(value: number) {
 export function formatQuotaBar(percent: number, width: number) {
   const columns = Math.max(0, Math.floor(width))
   const filled = Math.round((clampPercent(percent) / 100) * columns)
-  return `${"█".repeat(filled)}${"░".repeat(columns - filled)}`
+  return `${"#".repeat(filled)}${"-".repeat(columns - filled)}`
 }
 
 function formatWindow(label: "5h" | "wk", item: QuotaWindow) {
@@ -105,7 +105,7 @@ function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined) {
     snapshot.weekly ? formatWindow("wk", snapshot.weekly) : undefined,
   ].filter((part): part is string => Boolean(part))
 
-  return parts.join(" · ")
+  return parts.join(" | ")
 }
 
 export function formatCodexQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined) {
@@ -224,8 +224,8 @@ export function truncatePromptLabel(value: string | undefined, maxLength = 32) {
   if (!value) return
   const limit = Math.max(1, Math.floor(maxLength))
   if (value.length <= limit) return value
-  if (limit === 1) return "…"
-  return `${value.slice(0, limit - 1)}…`
+  if (limit <= 3) return ".".repeat(limit)
+  return `${value.slice(0, limit - 3)}...`
 }
 
 export function formatUsageQuotaReport(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {

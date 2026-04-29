@@ -8,9 +8,9 @@ OpenCode TUI plugin for Codex quota and clearly labeled provider-usage visibilit
 - **Other providers**: rolling five-hour and weekly local token usage observed from OpenCode assistant messages.
 - **Provider-quota framework handoff**: the standalone plugin track can show stock-OpenCode detail views today; the native OpenCode PR track owns exact prompt-metrics placement and server-side provider auth access.
 
-- `exact` — current remaining quota from a provider-owned or OpenCode-owned quota source.
-- `reported` — official limits or response/header values that are current but may not cover every provider window.
-- `estimated` — local usage or heuristics only; never shown as enforced remaining quota in the compact prompt.
+- `exact` - current remaining quota from a provider-owned or OpenCode-owned quota source.
+- `reported` - official limits or response/header values that are current but may not cover every provider window.
+- `estimated` - local usage or heuristics only; never shown as enforced remaining quota in the compact prompt.
 
 Compact prompt output only includes `exact` and `reported` windows. Estimated local usage is available in details so it cannot be mistaken for real provider quota.
 
@@ -75,7 +75,7 @@ For local development:
 Example compact status:
 
 ```text
-codex quota 5h 88% left · wk 94% left
+codex quota 5h 88% left | wk 94% left
 ```
 
 Fallback when Codex remote quota is unavailable:
@@ -95,9 +95,9 @@ Local OpenCode usage, not provider-enforced quota:
 
 Quota data must carry one of these confidence labels:
 
-- `exact` — the provider or OpenCode reports current remaining quota and reset windows.
-- `reported` — an official API, configured limit, or response header reports limits/remaining values, but not necessarily the full long-window quota picture.
-- `estimated` — inferred from local counters, warnings, or heuristics. Estimated data belongs in detail views and must not be presented as exact remaining quota.
+- `exact` - the provider or OpenCode reports current remaining quota and reset windows.
+- `reported` - an official API, configured limit, or response header reports limits/remaining values, but not necessarily the full long-window quota picture.
+- `estimated` - inferred from local counters, warnings, or heuristics. Estimated data belongs in detail views and must not be presented as exact remaining quota.
 
 | Provider | Current plugin data | Confidence | Compact stock-plugin prompt |
 | --- | --- | --- | --- |

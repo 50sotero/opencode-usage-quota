@@ -138,6 +138,8 @@ function formatUnavailablePrompt(snapshot: ProviderQuotaSnapshot | undefined) {
   return `${snapshot?.provider ?? "codex"} quota unavailable`
 }
 
+const compactWindowSeparator = " | "
+
 export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnapshot[], activeProvider?: string) {
   const snapshot = snapshotWithPromptWindows(snapshots, activeProvider)
   if (!snapshot) {
@@ -149,7 +151,7 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
     (window) => `${window.label} ${Math.round(clampProviderQuotaPercent(window.remainingPercent!))}%`,
   )
   if (parts.length === 0) return
-  return `${snapshot.provider} ${parts.join(" · ")}`
+  return `${snapshot.provider} ${parts.join(compactWindowSeparator)}`
 }
 
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
@@ -175,7 +177,7 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   }
 
   for (const snapshot of snapshots) {
-    const suffix = snapshot.detail ? ` — ${snapshot.detail}` : ""
+    const suffix = snapshot.detail ? ` - ${snapshot.detail}` : ""
     lines.push(`${snapshot.label} (${snapshot.provider}): ${snapshot.status}${suffix}`)
     for (const window of snapshot.windows) {
       lines.push(`- ${window.label}: ${formatProviderQuotaValue(window)} ${window.confidence} from ${window.source}`)
