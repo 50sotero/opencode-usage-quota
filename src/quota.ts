@@ -1,3 +1,5 @@
+import { quotaGlyphs, type GlyphStyle } from "./glyphs.js"
+
 export type QuotaWindow = {
   remainingPercent: number
   resetSeconds?: number
@@ -86,10 +88,11 @@ export function clampPercent(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)))
 }
 
-export function formatQuotaBar(percent: number, width: number) {
+export function formatQuotaBar(percent: number, width: number, glyphStyle: GlyphStyle = "unicode") {
   const columns = Math.max(0, Math.floor(width))
   const filled = Math.round((clampPercent(percent) / 100) * columns)
-  return `${"#".repeat(filled)}${"-".repeat(columns - filled)}`
+  const glyphs = quotaGlyphs(glyphStyle)
+  return `${glyphs.barFilled.repeat(filled)}${glyphs.barEmpty.repeat(columns - filled)}`
 }
 
 function formatWindow(label: "5h" | "wk", item: QuotaWindow) {
@@ -97,7 +100,7 @@ function formatWindow(label: "5h" | "wk", item: QuotaWindow) {
   return `${label} ${percent}% left`
 }
 
-function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined) {
+function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined, glyphStyle: GlyphStyle = "unicode") {
   if (!snapshot?.fiveHour && !snapshot?.weekly) return
 
   const parts = [
@@ -105,7 +108,7 @@ function formatQuotaWindows(snapshot: CodexQuotaSnapshot | undefined) {
     snapshot.weekly ? formatWindow("wk", snapshot.weekly) : undefined,
   ].filter((part): part is string => Boolean(part))
 
-  return parts.join(" | ")
+  return parts.join(quotaGlyphs(glyphStyle).compactWindowSeparator)
 }
 
 export function formatCodexQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined) {
@@ -113,8 +116,8 @@ export function formatCodexQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined)
   return snapshot.fiveHour ? formatWindow("5h", snapshot.fiveHour) : formatWindow("wk", snapshot.weekly!)
 }
 
-export function formatUsageQuotaStatus(snapshot: CodexQuotaSnapshot | undefined) {
-  const quota = formatQuotaWindows(snapshot)
+export function formatUsageQuotaStatus(snapshot: CodexQuotaSnapshot | undefined, glyphStyle: GlyphStyle = "unicode") {
+  const quota = formatQuotaWindows(snapshot, glyphStyle)
   return quota ? `codex quota ${quota}` : "codex quota unavailable"
 }
 
@@ -220,17 +223,22 @@ export function formatUsageQuotaPrompt(snapshot: CodexQuotaSnapshot | undefined,
   return formatCodexQuotaPrompt(snapshot)
 }
 
-export function truncatePromptLabel(value: string | undefined, maxLength = 32) {
+export function truncatePromptLabel(value: string | undefined, maxLength = 32, glyphStyle: GlyphStyle = "unicode") {
   if (!value) return
   const limit = Math.max(1, Math.floor(maxLength))
   if (value.length <= limit) return value
-  if (limit <= 3) return ".".repeat(limit)
-  return `${value.slice(0, limit - 3)}...`
+  const ellipsis = quotaGlyphs(glyphStyle).ellipsis
+  if (limit <= ellipsis.length) return ellipsis.slice(0, limit)
+  return `${value.slice(0, limit - ellipsis.length)}${ellipsis}`
 }
 
-export function formatUsageQuotaReport(snapshot: CodexQuotaSnapshot | undefined, summary: readonly ProviderUsageSummary[]) {
+export function formatUsageQuotaReport(
+  snapshot: CodexQuotaSnapshot | undefined,
+  summary: readonly ProviderUsageSummary[],
+  glyphStyle: GlyphStyle = "unicode",
+) {
   const lines = ["Usage quota status", ""]
-  const codex = formatQuotaWindows(snapshot)
+  const codex = formatQuotaWindows(snapshot, glyphStyle)
 
   lines.push(codex ? `Codex remote quota: ${codex}` : "Codex remote quota: unavailable")
   lines.push("")

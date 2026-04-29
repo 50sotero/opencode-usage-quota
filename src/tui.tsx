@@ -1,6 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createMemo, createSignal } from "solid-js"
+import { normalizeGlyphStyle, type GlyphStyle } from "./glyphs.js"
 import {
   formatProviderQuotaPrompt,
   formatProviderQuotaReport,
@@ -17,6 +18,7 @@ const storageKey = "opencode-usage-quota.records"
 
 type Options = {
   refreshMs?: number
+  glyphs?: GlyphStyle
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -29,6 +31,7 @@ function parseOptions(value: unknown): Required<Options> {
 
   return {
     refreshMs: Math.max(15_000, refreshMs),
+    glyphs: normalizeGlyphStyle(record.glyphs),
   }
 }
 
@@ -44,27 +47,33 @@ function hasNativeProviderQuota(client: unknown) {
 
 type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
 
-function QuotaStatusText(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[] }) {
-  const label = createMemo(() => formatProviderQuotaPrompt(props.snapshots))
+function QuotaStatusText(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[]; glyphs: GlyphStyle }) {
+  const label = createMemo(() => formatProviderQuotaPrompt(props.snapshots, undefined, props.glyphs))
 
   return <text fg={props.api.theme.current.textMuted}>{label() ?? ""}</text>
 }
 
-function BelowPromptStatus(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[]; block?: boolean }) {
+function BelowPromptStatus(props: {
+  api: TuiPluginApi
+  snapshots: readonly ProviderQuotaSnapshot[]
+  glyphs: GlyphStyle
+  block?: boolean
+}) {
   if (props.block) {
     return (
       <box width="100%" height={1} alignItems="center" justifyContent="center">
-        <QuotaStatusText api={props.api} snapshots={props.snapshots} />
+        <QuotaStatusText api={props.api} snapshots={props.snapshots} glyphs={props.glyphs} />
       </box>
     )
   }
 
-  return <QuotaStatusText api={props.api} snapshots={props.snapshots} />
+  return <QuotaStatusText api={props.api} snapshots={props.snapshots} glyphs={props.glyphs} />
 }
 
 function SessionPromptWithStatus(props: {
   api: TuiPluginApi
   snapshots: readonly ProviderQuotaSnapshot[]
+  glyphs: GlyphStyle
   sessionID: string
   visible?: boolean
   disabled?: boolean
@@ -81,7 +90,7 @@ function SessionPromptWithStatus(props: {
         ref={props.promptRef}
       />
       <box width="100%" height={1} flexDirection="row" justifyContent="flex-end" paddingRight={2}>
-        <QuotaStatusText api={props.api} snapshots={props.snapshots} />
+        <QuotaStatusText api={props.api} snapshots={props.snapshots} glyphs={props.glyphs} />
       </box>
     </box>
   )
@@ -133,6 +142,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
             <SessionPromptWithStatus
               api={api}
               snapshots={snapshots()}
+              glyphs={options.glyphs}
               sessionID={props.session_id}
               visible={props.visible}
               disabled={props.disabled}
@@ -142,7 +152,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
           )
         },
         home_bottom() {
-          return <BelowPromptStatus api={api} snapshots={snapshots()} block />
+          return <BelowPromptStatus api={api} snapshots={snapshots()} glyphs={options.glyphs} block />
         },
       },
     })
@@ -162,7 +172,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
         api.ui.dialog.replace(() => (
           <api.ui.DialogAlert
             title="Provider quota"
-            message={formatProviderQuotaReport(snapshots())}
+            message={formatProviderQuotaReport(snapshots(), options.glyphs)}
             onConfirm={() => api.ui.dialog.clear()}
           />
         ))

@@ -1,3 +1,5 @@
+import { quotaGlyphs, type GlyphStyle } from "./glyphs.js"
+
 export type ProviderQuotaConfidence = "exact" | "reported" | "estimated"
 export type ProviderQuotaSource = "official_api" | "response_headers" | "client_state" | "heuristic"
 export type ProviderQuotaStatus = "available" | "unavailable" | "degraded"
@@ -138,9 +140,11 @@ function formatUnavailablePrompt(snapshot: ProviderQuotaSnapshot | undefined) {
   return `${snapshot?.provider ?? "codex"} quota unavailable`
 }
 
-const compactWindowSeparator = " | "
-
-export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnapshot[], activeProvider?: string) {
+export function formatProviderQuotaPrompt(
+  snapshots: readonly ProviderQuotaSnapshot[],
+  activeProvider?: string,
+  glyphStyle: GlyphStyle = "unicode",
+) {
   const snapshot = snapshotWithPromptWindows(snapshots, activeProvider)
   if (!snapshot) {
     const unavailable = unavailableSnapshot(snapshots, activeProvider)
@@ -151,7 +155,7 @@ export function formatProviderQuotaPrompt(snapshots: readonly ProviderQuotaSnaps
     (window) => `${window.label} ${Math.round(clampProviderQuotaPercent(window.remainingPercent!))}%`,
   )
   if (parts.length === 0) return
-  return `${snapshot.provider} ${parts.join(compactWindowSeparator)}`
+  return `${snapshot.provider} ${parts.join(quotaGlyphs(glyphStyle).compactWindowSeparator)}`
 }
 
 function formatProviderQuotaValue(window: ProviderQuotaWindow) {
@@ -168,8 +172,12 @@ function formatProviderQuotaValue(window: ProviderQuotaWindow) {
   return parts.length > 0 ? parts.join(" ") : "status only"
 }
 
-export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnapshot[]) {
+export function formatProviderQuotaReport(
+  snapshots: readonly ProviderQuotaSnapshot[],
+  glyphStyle: GlyphStyle = "unicode",
+) {
   const lines = ["Provider quota status", ""]
+  const glyphs = quotaGlyphs(glyphStyle)
 
   if (snapshots.length === 0) {
     lines.push("No provider quota snapshots are available yet.")
@@ -177,7 +185,7 @@ export function formatProviderQuotaReport(snapshots: readonly ProviderQuotaSnaps
   }
 
   for (const snapshot of snapshots) {
-    const suffix = snapshot.detail ? ` - ${snapshot.detail}` : ""
+    const suffix = snapshot.detail ? `${glyphs.detailSeparator}${snapshot.detail}` : ""
     lines.push(`${snapshot.label} (${snapshot.provider}): ${snapshot.status}${suffix}`)
     for (const window of snapshot.windows) {
       lines.push(`- ${window.label}: ${formatProviderQuotaValue(window)} ${window.confidence} from ${window.source}`)

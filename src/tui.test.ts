@@ -46,4 +46,12 @@ describe("usage quota TUI plugin render safety", () => {
     expect(source).toContain("const nativeProviderQuota = hasNativeProviderQuota(api.client)")
     expect(source).toContain("if (!nativeProviderQuota)")
   })
+
+  test("defaults quota rendering to configurable unicode glyphs", () => {
+    const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
+
+    expect(source).toContain("normalizeGlyphStyle")
+    expect(source).toContain("glyphs: normalizeGlyphStyle(record.glyphs)")
+    expect(source).toContain("formatProviderQuotaPrompt(props.snapshots, undefined, props.glyphs)")
+  })
 })

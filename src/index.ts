@@ -1,4 +1,5 @@
 export { default, UsageQuotaTuiPlugin } from "./tui.js"
+export * from "./glyphs.js"
 export * from "./quota.js"
 export { codexQuotaAdapter } from "./providers/codex.js"
 export { localUsageAdapter } from "./providers/local-usage.js"
