@@ -1,13 +1,16 @@
 # opencode-usage-quota
 
-OpenCode TUI plugin for Codex quota and local provider usage visibility.
+OpenCode TUI plugin for provider quota visibility. It shows compact provider quota below the chat prompt on stock OpenCode, keeps `/quota` available for detail views, and automatically avoids duplicate compact rows when a native OpenCode provider-quota UI is detectable.
 
-## What it shows
+## What it reports
 
-- **Codex remote quota**: five-hour and weekly windows when the running OpenCode build exposes `experimental.console.codexQuota`.
-- **Other providers**: rolling five-hour and weekly local token usage observed from OpenCode assistant messages.
+Provider data is normalized with explicit confidence labels:
 
-Other provider rows are intentionally labeled as local usage, not provider-enforced quota. Anthropic, Gemini, Copilot, OpenRouter, and custom OpenAI-compatible providers do not expose a shared OpenCode quota endpoint today.
+- `exact` — current remaining quota from a provider-owned or OpenCode-owned quota source.
+- `reported` — official limits or response/header values that are current but may not cover every provider window.
+- `estimated` — local usage or heuristics only; never shown as enforced remaining quota in the compact prompt.
+
+Compact prompt output only includes `exact` and `reported` windows. Estimated local usage is available in details so it cannot be mistaken for real provider quota.
 
 ## Install from this repo
 
@@ -27,35 +30,40 @@ For local development:
 }
 ```
 
-This repository includes `examples/tui.local.json`, which loads `../src/tui.tsx` directly for local smoke testing.
-
 ## UI surfaces
 
-- Compact status in `session_prompt_right` and `home_prompt_right`.
+- Compact status below the session prompt and home prompt when native OpenCode provider quota is absent.
 - Command palette entry and slash command: `/quota`.
+- Native-aware guard: if OpenCode exposes generated native provider-quota helpers, this plugin keeps the detail command but does not render a duplicate compact prompt row.
 
 Example compact status:
 
 ```text
-codex 5h ████░ 88% · wk █████ 94%
+codex 5h 88% · wk 94%
 ```
 
-Fallback when Codex remote quota is unavailable:
-
-```text
-openai local 5h 300t · wk 500t
-```
+If only estimated local usage exists, the compact prompt stays empty and `/quota` labels the data as estimated usage.
 
 ## Provider support matrix
 
-| Provider | Remote quota | Local usage windows |
-| --- | --- | --- |
-| Codex / ChatGPT OAuth | Supported when OpenCode exposes the safe quota endpoint | Yes |
-| OpenAI API key | Not the same quota pool as ChatGPT Codex | Yes |
-| Anthropic | No shared quota endpoint in OpenCode | Yes |
-| Gemini / Google | No shared quota endpoint in OpenCode | Yes |
-| GitHub Copilot | No shared quota endpoint in OpenCode | Yes |
-| OpenRouter / compatible providers | Provider-specific; unavailable by default | Yes |
+| Provider/source | Compact quota | Detail view | Confidence |
+| --- | --- | --- | --- |
+| Codex / ChatGPT OAuth via OpenCode quota endpoint | Yes | Yes | `exact` |
+| Native OpenCode `/experimental/provider-quota` when present | Native UI owns compact row | Yes | Source-provided |
+| Local OpenCode assistant token usage | No | Yes | `estimated` |
+| Anthropic, Gemini, Copilot, OpenRouter, custom providers | Adapter framework ready; exact quota requires provider-specific adapter/native source | Yes when adapter data exists | `reported` or `estimated` unless exact source exists |
+
+## Keeper utility
+
+This repo includes `opencode-quota-keeper` for local patched-binary guardrails and memory-caged visual checks:
+
+```bash
+bun run keeper -- doctor
+bun run keeper -- repair
+OPENCODE_MEMORY_CAP_KB=1200000 bun run keeper -- capture local-home
+```
+
+`doctor` checks whether the installed OpenCode binary contains a provider quota endpoint and whether duplicate quota plugins are configured. `capture` runs the tmux visual harness with a memory cap so a bad OpenCode session cannot consume the machine.
 
 ## Development
 
@@ -65,5 +73,3 @@ bun test
 bun run typecheck
 bun run build
 ```
-
-Vault-Tec disclaimer: undocumented quota endpoints may mutate without warning due to provider policy changes, cosmic rays, or routine API entropy.

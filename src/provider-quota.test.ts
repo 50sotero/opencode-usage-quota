@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { formatProviderQuotaPrompt, normalizeProviderQuotaSnapshots } from "./provider-quota.js"
+import {
+  formatProviderQuotaPrompt,
+  hasNativeProviderQuotaClient,
+  normalizeProviderQuotaSnapshots,
+  readNativeProviderQuota,
+} from "./provider-quota.js"
 
 describe("provider quota model", () => {
   test("keeps exact and reported windows visible in compact prompt output", () => {
@@ -84,5 +89,31 @@ describe("provider quota model", () => {
 
     expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 97%")
     expect(formatProviderQuotaPrompt(snapshots, "anthropic")).toBe("gemini rpm 71%")
+  })
+
+
+  test("detects explicit native provider quota helpers without hiding stock raw clients", async () => {
+    expect(hasNativeProviderQuotaClient({ client: { get: async () => ({ data: { providerQuota: [] } }) } })).toBe(false)
+    expect(hasNativeProviderQuotaClient({ experimental: { providerQuota: { get: async () => ({ data: { providerQuota: [] } }) } } })).toBe(true)
+
+    const snapshots = await readNativeProviderQuota({
+      client: {
+        get: async () => ({
+          data: {
+            providerQuota: [
+              {
+                provider: "codex",
+                label: "Codex",
+                fetchedAt: 1,
+                status: "available",
+                windows: [{ label: "5h", remainingPercent: 91, confidence: "exact", source: "official_api" }],
+              },
+            ],
+          },
+        }),
+      },
+    })
+
+    expect(formatProviderQuotaPrompt(snapshots, "codex")).toBe("codex 5h 91%")
   })
 })
