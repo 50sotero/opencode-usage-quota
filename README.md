@@ -31,6 +31,23 @@ Use this mode for a locally patched or future upstream OpenCode build that expos
 
 The native OpenCode track should own compact prompt placement. In that mode, this plugin should remain useful for `/quota` details and QA, but avoid rendering a duplicate compact quota row when native provider quota is visibly present.
 
+## Two install modes
+
+### Stock OpenCode plugin mode
+
+Use this mode for released OpenCode builds that do not include native provider quota support. The plugin:
+
+- fetches Codex quota through OpenCode's safe experimental Codex quota helper/route when available;
+- renders its own compact Codex status under the prompt rows;
+- keeps local provider token/cost windows in the `/quota` detail view only; and
+- labels local provider data as usage, not exact quota.
+
+### Native OpenCode provider-quota mode
+
+Use this mode for a locally patched or future upstream OpenCode build that exposes native provider quota state, such as `GET /experimental/provider-quota` and prompt metrics beside the built-in context/cost line.
+
+The native OpenCode track should own compact prompt placement. In that mode, this plugin should remain useful for `/quota` details and QA, but avoid rendering a duplicate compact quota row when native provider quota is visibly present.
+
 ## Install from this repo
 
 ```jsonc
