@@ -8,6 +8,13 @@ function sessionPromptBody(source: string) {
   return source.slice(start, end === -1 ? undefined : end)
 }
 
+function functionBody(source: string, name: string) {
+  const start = source.indexOf(`function ${name}`)
+  if (start === -1) return ""
+  const next = source.indexOf("\n  function ", start + 1)
+  return source.slice(start, next === -1 ? undefined : next)
+}
+
 describe("usage quota TUI plugin render safety", () => {
   test("does not persist local usage records from session prompt render", () => {
     const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
@@ -53,5 +60,16 @@ describe("usage quota TUI plugin render safety", () => {
     expect(source).toContain("normalizeGlyphStyle")
     expect(source).toContain("glyphs: normalizeGlyphStyle(record.glyphs)")
     expect(source).toContain("formatProviderQuotaPrompt(props.snapshots, undefined, props.glyphs)")
+  })
+
+  test("debounces quota refreshes triggered by streaming message updates", () => {
+    const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
+    const body = functionBody(source, "remember")
+
+    expect(source).toContain("eventRefreshDebounceMs")
+    expect(source).toContain("let refreshInFlight = false")
+    expect(source).toContain("let refreshQueued = false")
+    expect(body).toContain("scheduleProviderQuotaRefresh(options.eventRefreshDebounceMs)")
+    expect(body).not.toContain("refreshProviderQuota()")
   })
 })

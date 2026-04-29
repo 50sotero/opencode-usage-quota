@@ -18,6 +18,7 @@ const storageKey = "opencode-usage-quota.records"
 
 type Options = {
   refreshMs?: number
+  eventRefreshDebounceMs?: number
   glyphs?: GlyphStyle
 }
 
@@ -28,9 +29,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseOptions(value: unknown): Required<Options> {
   const record = isRecord(value) ? value : {}
   const refreshMs = typeof record.refreshMs === "number" && Number.isFinite(record.refreshMs) ? record.refreshMs : 60_000
+  const eventRefreshDebounceMs =
+    typeof record.eventRefreshDebounceMs === "number" && Number.isFinite(record.eventRefreshDebounceMs)
+      ? record.eventRefreshDebounceMs
+      : 5_000
 
   return {
     refreshMs: Math.max(15_000, refreshMs),
+    eventRefreshDebounceMs: Math.max(1_000, eventRefreshDebounceMs),
     glyphs: normalizeGlyphStyle(record.glyphs),
   }
 }
@@ -101,6 +107,9 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const nativeProviderQuota = hasNativeProviderQuota(api.client)
   const [snapshots, setSnapshots] = createSignal<ProviderQuotaSnapshot[]>([])
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined
+  let refreshInFlight = false
+  let refreshQueued = false
 
   async function refreshProviderQuota() {
     try {
@@ -116,12 +125,37 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
     }
   }
 
+  async function runProviderQuotaRefresh() {
+    if (refreshInFlight) {
+      refreshQueued = true
+      return
+    }
+
+    refreshInFlight = true
+    try {
+      do {
+        refreshQueued = false
+        await refreshProviderQuota()
+      } while (refreshQueued)
+    } finally {
+      refreshInFlight = false
+    }
+  }
+
+  function scheduleProviderQuotaRefresh(delayMs = 0) {
+    if (refreshTimer) clearTimeout(refreshTimer)
+    refreshTimer = setTimeout(() => {
+      refreshTimer = undefined
+      runProviderQuotaRefresh()
+    }, delayMs)
+  }
+
   function remember(record: UsageRecord | undefined) {
     if (!record) return
     const next = upsertUsageRecord(records(), record)
     api.kv.set(storageKey, next)
     setRecords(next)
-    refreshProviderQuota()
+    scheduleProviderQuotaRefresh(options.eventRefreshDebounceMs)
   }
 
   const stopEvent = api.event.on("message.updated", (event) => {
@@ -129,9 +163,12 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   })
   api.lifecycle.onDispose(stopEvent)
 
-  refreshProviderQuota()
-  const timer = setInterval(refreshProviderQuota, options.refreshMs)
-  api.lifecycle.onDispose(() => clearInterval(timer))
+  scheduleProviderQuotaRefresh()
+  const timer = setInterval(() => scheduleProviderQuotaRefresh(), options.refreshMs)
+  api.lifecycle.onDispose(() => {
+    clearInterval(timer)
+    if (refreshTimer) clearTimeout(refreshTimer)
+  })
 
   if (!nativeProviderQuota) {
     api.slots.register({
