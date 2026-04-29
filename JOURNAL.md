@@ -9,6 +9,9 @@
 - Updated QA instructions to use the memory cage from the plan (`OPENCODE_MEMORY_CAP_KB=1200000`) for home and prompted-session captures, with a warning that prompted captures can contact a provider.
 - Verification before and after the documentation edits: `bun test`, `bun run typecheck`, and `bun run build` passed in the worker worktree on 2026-04-29.
 
+- Added `docs/provider-quota-evidence.md` as the provider evidence and upstream PR readiness artifact for the two-track delivery. It records official Anthropic, Gemini, GitHub Copilot, and OpenRouter quota/metrics surfaces and maps them to `exact`, `reported`, or `estimated` adapter behavior.
+- Evidence conclusion: Anthropic headers and OpenRouter key data can support `reported` current-limit/remaining adapters; Gemini published tier/model limits are not guaranteed current remaining usage; GitHub Copilot metrics are organization/team usage visibility, not individual remaining quota.
+
 ## 2026-04-28
 
 - Created the standalone `opencode-usage-quota` repo from the empty public GitHub repository at `https://github.com/50sotero/opencode-usage-quota`.

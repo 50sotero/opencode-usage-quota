@@ -93,6 +93,8 @@ Quota data must carry one of these confidence labels:
 
 The official OpenCode PR track should reuse the same `exact | reported | estimated` vocabulary so native prompt metrics and plugin detail views tell the same truth.
 
+See [`docs/provider-quota-evidence.md`](docs/provider-quota-evidence.md) for the official-source evidence matrix that gates future provider adapters and upstream PR language.
+
 ## Development
 
 ```bash
