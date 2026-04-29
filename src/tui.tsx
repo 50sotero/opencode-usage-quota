@@ -12,6 +12,7 @@ import {
 } from "./provider-quota.js"
 import { isUsageRecord, upsertUsageRecord, usageRecordFromEvent, type UsageRecord } from "./quota.js"
 import { defaultProviderQuotaAdapters, readProviderQuotas } from "./providers/index.js"
+import { formatSessionDashboardPrompt, formatSessionDashboardReport } from "./session-dashboard.js"
 
 const id = "opencode-usage-quota"
 const storageKey = "opencode-usage-quota.records"
@@ -53,8 +54,50 @@ function hasNativeProviderQuota(client: unknown) {
 
 type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
 
+function currentRouteSessionID(api: TuiPluginApi) {
+  const current = api.route.current
+  if (current.name !== "session" || !current.params) return
+  return typeof current.params.sessionID === "string" ? current.params.sessionID : undefined
+}
+
+function latestSessionRecord(records: readonly UsageRecord[], sessionID: string | undefined) {
+  if (!sessionID) return
+  for (let index = records.length - 1; index >= 0; index--) {
+    const record = records[index]
+    if (record.sessionID === sessionID) return record
+  }
+}
+
+function contextLimitForSession(api: TuiPluginApi, records: readonly UsageRecord[], sessionID: string | undefined) {
+  const latest = latestSessionRecord(records, sessionID)
+  if (!latest) return
+  const provider = api.state.provider.find((item) => item.id === latest.provider)
+  const context = provider?.models?.[latest.model]?.limit?.context
+  return typeof context === "number" && Number.isFinite(context) ? context : undefined
+}
+
 function QuotaStatusText(props: { api: TuiPluginApi; snapshots: readonly ProviderQuotaSnapshot[]; glyphs: GlyphStyle }) {
   const label = createMemo(() => formatProviderQuotaPrompt(props.snapshots, undefined, props.glyphs))
+
+  return <text fg={props.api.theme.current.textMuted}>{label() ?? ""}</text>
+}
+
+function DashboardStatusText(props: {
+  api: TuiPluginApi
+  snapshots: readonly ProviderQuotaSnapshot[]
+  records: readonly UsageRecord[]
+  sessionID: string
+  glyphs: GlyphStyle
+}) {
+  const label = createMemo(() =>
+    formatSessionDashboardPrompt({
+      snapshots: props.snapshots,
+      records: props.records,
+      sessionID: props.sessionID,
+      contextLimit: contextLimitForSession(props.api, props.records, props.sessionID),
+      glyphStyle: props.glyphs,
+    }),
+  )
 
   return <text fg={props.api.theme.current.textMuted}>{label() ?? ""}</text>
 }
@@ -79,6 +122,7 @@ function BelowPromptStatus(props: {
 function SessionPromptWithStatus(props: {
   api: TuiPluginApi
   snapshots: readonly ProviderQuotaSnapshot[]
+  records: readonly UsageRecord[]
   glyphs: GlyphStyle
   sessionID: string
   visible?: boolean
@@ -96,7 +140,13 @@ function SessionPromptWithStatus(props: {
         ref={props.promptRef}
       />
       <box width="100%" height={1} flexDirection="row" justifyContent="flex-end" paddingRight={2}>
-        <QuotaStatusText api={props.api} snapshots={props.snapshots} glyphs={props.glyphs} />
+        <DashboardStatusText
+          api={props.api}
+          snapshots={props.snapshots}
+          records={props.records}
+          sessionID={props.sessionID}
+          glyphs={props.glyphs}
+        />
       </box>
     </box>
   )
@@ -107,6 +157,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const nativeProviderQuota = hasNativeProviderQuota(api.client)
   const [snapshots, setSnapshots] = createSignal<ProviderQuotaSnapshot[]>([])
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
+  const [lastSessionID, setLastSessionID] = createSignal<string | undefined>()
   let refreshTimer: ReturnType<typeof setTimeout> | undefined
   let refreshInFlight = false
   let refreshQueued = false
@@ -155,6 +206,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
     const next = upsertUsageRecord(records(), record)
     api.kv.set(storageKey, next)
     setRecords(next)
+    if (record.sessionID) setLastSessionID(record.sessionID)
     scheduleProviderQuotaRefresh(options.eventRefreshDebounceMs)
   }
 
@@ -179,6 +231,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
             <SessionPromptWithStatus
               api={api}
               snapshots={snapshots()}
+              records={records()}
               glyphs={options.glyphs}
               sessionID={props.session_id}
               visible={props.visible}
@@ -210,6 +263,32 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
           <api.ui.DialogAlert
             title="Provider quota"
             message={formatProviderQuotaReport(snapshots(), options.glyphs)}
+            onConfirm={() => api.ui.dialog.clear()}
+          />
+        ))
+      },
+    },
+    {
+      title: "Show Session Dashboard",
+      value: "usage-quota.dashboard",
+      category: "Usage",
+      description: "Show per-session tokens, context usage, quota, and update timing",
+      slash: {
+        name: "dashboard",
+        aliases: ["usage-dashboard"],
+      },
+      onSelect() {
+        const sessionID = currentRouteSessionID(api) ?? lastSessionID()
+        api.ui.dialog.replace(() => (
+          <api.ui.DialogAlert
+            title="Session dashboard"
+            message={formatSessionDashboardReport({
+              snapshots: snapshots(),
+              records: records(),
+              sessionID,
+              contextLimit: contextLimitForSession(api, records(), sessionID),
+              glyphStyle: options.glyphs,
+            })}
             onConfirm={() => api.ui.dialog.clear()}
           />
         ))

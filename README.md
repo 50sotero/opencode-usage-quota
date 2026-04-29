@@ -31,23 +31,6 @@ Use this mode for a locally patched or future upstream OpenCode build that expos
 
 The native OpenCode track should own compact prompt placement. In that mode, this plugin should remain useful for `/quota` details and QA, but avoid rendering a duplicate compact quota row when native provider quota is visibly present.
 
-## Two install modes
-
-### Stock OpenCode plugin mode
-
-Use this mode for released OpenCode builds that do not include native provider quota support. The plugin:
-
-- fetches Codex quota through OpenCode's safe experimental Codex quota helper/route when available;
-- renders its own compact Codex status under the prompt rows;
-- keeps local provider token/cost windows in the `/quota` detail view only; and
-- labels local provider data as usage, not exact quota.
-
-### Native OpenCode provider-quota mode
-
-Use this mode for a locally patched or future upstream OpenCode build that exposes native provider quota state, such as `GET /experimental/provider-quota` and prompt metrics beside the built-in context/cost line.
-
-The native OpenCode track should own compact prompt placement. In that mode, this plugin should remain useful for `/quota` details and QA, but avoid rendering a duplicate compact quota row when native provider quota is visibly present.
-
 ## Install from this repo
 
 ```jsonc
@@ -71,13 +54,22 @@ For local development:
 ## UI surfaces
 
 - Compact Codex status below `session_prompt` and in `home_bottom` for stock OpenCode plugin mode.
-- Command palette entry and slash command: `/quota`.
+- Session metrics are appended to the compact row after a session has token data: context usage, total session tokens, and `updated HH:MM:SS`.
+- Command palette entries and slash commands:
+  - `/quota` — provider quota and local usage detail.
+  - `/dashboard` — current-session dashboard with token buckets, context usage, quota windows, and data-source labels.
 - Native-aware guard: if OpenCode exposes generated native provider-quota helpers, this plugin keeps the detail command but does not render a duplicate compact prompt row.
 
 Example compact status:
 
 ```text
 Codex · 5h █████████░ 88% · wk █████████░ 94% · updated 13:05:42
+```
+
+After a prompted session:
+
+```text
+Codex · 5h █████████░ 88% · wk █████████░ 94% · updated 13:05:42 · ctx 19.9K/400K 5% · tok 22.4K
 ```
 
 Fallback when Codex remote quota is unavailable:
@@ -92,6 +84,43 @@ The `/quota` dialog is where local provider usage appears:
 Local OpenCode usage, not provider-enforced quota:
 - anthropic/claude-sonnet: 5h 1,250,000 tokens, wk 9,500,000 tokens
 ```
+
+The `/dashboard` dialog is per-session and labels observed/local values separately from provider-enforced quota:
+
+```text
+Session dashboard
+
+Quota
+Codex      5h   █████████░ 88% left
+Codex      wk   █████████░ 94% left
+
+Current session
+Input       19,858
+Output      7
+Reasoning   23
+Cache read  2,560
+Total       22,448
+Updated     13:05:42
+
+Context
+Used        19,858 / 400,000 (5%)
+Usage       █░░░░░░░░░
+Source      observed assistant input tokens
+```
+
+## Screenshots
+
+### Compact quota row on the home screen
+
+![Compact quota row on the home screen](docs/screenshots/compact-home-quota-row.png)
+
+### Compact session metrics below the chat box
+
+![Compact session metrics below the chat box](docs/screenshots/compact-session-metrics-row.png)
+
+### `/dashboard` session detail view
+
+![Session dashboard dialog](docs/screenshots/session-dashboard-dialog.png)
 
 ## Provider support and confidence labels
 

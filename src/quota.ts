@@ -18,6 +18,11 @@ export type UsageRecord = {
   provider: string
   model: string
   tokens: number
+  inputTokens?: number
+  outputTokens?: number
+  reasoningTokens?: number
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
   cost: number
   timestamp: number
 }
@@ -131,12 +136,12 @@ export function usageRecordFromMessage(message: unknown, timestamp = Date.now())
   if (!tokens) return
 
   const cache = isRecord(tokens.cache) ? tokens.cache : {}
-  const total =
-    numberFrom(tokens.input) +
-    numberFrom(tokens.output) +
-    numberFrom(tokens.reasoning) +
-    numberFrom(cache.read) +
-    numberFrom(cache.write)
+  const inputTokens = numberFrom(tokens.input)
+  const outputTokens = numberFrom(tokens.output)
+  const reasoningTokens = numberFrom(tokens.reasoning)
+  const cacheReadTokens = numberFrom(cache.read)
+  const cacheWriteTokens = numberFrom(cache.write)
+  const total = inputTokens + outputTokens + reasoningTokens + cacheReadTokens + cacheWriteTokens
 
   if (total <= 0) return
 
@@ -146,6 +151,11 @@ export function usageRecordFromMessage(message: unknown, timestamp = Date.now())
     provider: stringFrom(message.providerID, "unknown"),
     model: stringFrom(message.modelID, "unknown"),
     tokens: total,
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    cacheReadTokens,
+    cacheWriteTokens,
     cost: numberFrom(message.cost),
     timestamp,
   }
@@ -165,6 +175,11 @@ export function isUsageRecord(value: unknown): value is UsageRecord {
     typeof value.provider === "string" &&
     typeof value.model === "string" &&
     typeof value.tokens === "number" &&
+    (value.inputTokens === undefined || typeof value.inputTokens === "number") &&
+    (value.outputTokens === undefined || typeof value.outputTokens === "number") &&
+    (value.reasoningTokens === undefined || typeof value.reasoningTokens === "number") &&
+    (value.cacheReadTokens === undefined || typeof value.cacheReadTokens === "number") &&
+    (value.cacheWriteTokens === undefined || typeof value.cacheWriteTokens === "number") &&
     typeof value.cost === "number" &&
     typeof value.timestamp === "number"
   )

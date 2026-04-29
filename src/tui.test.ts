@@ -46,6 +46,15 @@ describe("usage quota TUI plugin render safety", () => {
     expect(source).toContain('aliases: ["usage-quota"]')
   })
 
+  test("registers a /dashboard detail command without removing /quota", () => {
+    const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
+
+    expect(source).toContain('name: "dashboard"')
+    expect(source).toContain("formatSessionDashboardReport")
+    expect(source).toContain("formatSessionDashboardPrompt")
+    expect(source).toContain('name: "quota"')
+  })
+
   test("guards compact prompt slots behind native provider quota detection", () => {
     const source = readFileSync(new URL("../src/tui.tsx", import.meta.url), "utf8")
 
