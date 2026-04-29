@@ -51,6 +51,15 @@ function hasNativeProviderQuota(client: unknown) {
   const experimental = isRecord(client.experimental) ? client.experimental : undefined
   if (!experimental) return false
 
+  if (typeof experimental.providerQuota === "function" || isRecord(experimental.providerQuota)) return true
+  if (typeof experimental.provider_quota === "function" || isRecord(experimental.provider_quota)) return true
+
+  const provider = isRecord(experimental.provider) ? experimental.provider : undefined
+  return typeof provider?.quota === "function" || isRecord(provider?.quota)
+}
+
+type PromptRef = Parameters<TuiPluginApi["ui"]["Prompt"]>[0]["ref"]
+
 export function hasNativeProviderQuota(api: TuiPluginApi) {
   return hasNativeProviderQuotaClient(api.client)
 }
@@ -111,7 +120,8 @@ function SessionPromptWithStatus(props: {
 
 export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const options = parseOptions(rawOptions)
-  const [snapshots, setSnapshots] = createSignal<ProviderQuotaSnapshot[]>([])
+  const nativeProviderQuota = hasNativeProviderQuota(api.client)
+  const [snapshot, setSnapshot] = createSignal<CodexQuotaSnapshot>()
   const [records, setRecords] = createSignal<UsageRecord[]>(loadRecords(api))
 
   async function refreshProviderQuota() {
@@ -145,7 +155,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
   const timer = setInterval(refreshProviderQuota, options.refreshMs)
   api.lifecycle.onDispose(() => clearInterval(timer))
 
-  if (!hasNativeProviderQuota(api)) {
+  if (!nativeProviderQuota) {
     api.slots.register({
       order: 90,
       slots: {
@@ -153,7 +163,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
           return (
             <SessionPromptWithStatus
               api={api}
-              snapshots={snapshots()}
+              snapshot={snapshot()}
               sessionID={props.session_id}
               visible={props.visible}
               disabled={props.disabled}
@@ -166,7 +176,7 @@ export const UsageQuotaTuiPlugin: TuiPlugin = async (api, rawOptions) => {
           return (
             <BelowPromptStatus
               api={api}
-              snapshots={snapshots()}
+              snapshot={snapshot()}
               block
             />
           )
